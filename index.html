@@ -3,29 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>专用MP4播放器</title>
+<title>视频播放</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#000;color:#fff;padding:20px;font-family:sans-serif}
-.container{max-width:900px;margin:0 auto}
-.title{text-align:center;margin-bottom:20px}
-.video-box{width:100%;background:#000;border-radius:8px;overflow:hidden}
-video{width:100%;display:block}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#000;padding:20px}
+  .video-wrap{max-width:1000px;margin:0 auto}
+  video{width:100%;display:block;border-radius:8px}
 </style>
 </head>
 <body>
-<div class="container">
-  <h3 class="title">MP4 播放</h3>
-  <div class="video-box">
-    <video id="player" controls></video>
-  </div>
+<div class="video-wrap">
+  <video id="v" controls></video>
 </div>
 
 <script>
-const vid = document.getElementById('player');
-const url = 'https://ru.xiaohe1999.dpdns.org/raw/5_6154278803309863868.mp4';
-vid.src = url;
-vid.onerror = ()=>alert('仍解析失败：文件/服务器异常');
+const video = document.getElementById('v');
+// 加时间戳强制不使用缓存
+const url = 'https://ru.xiaohe1999.dpdns.org/raw/5_6154278803309863868.mp4'
++'?t='+new Date().getTime();
+
+// 尝试直接播放
+video.src = url;
+
+// 失败后再用跨域兼容方式
+video.onerror = async () => {
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    const blob = await res.blob();
+    video.src = URL.createObjectURL(blob);
+  } catch (e) {
+    alert("视频无法播放：服务器限制或跨域拦截");
+  }
+};
 </script>
 </body>
 </html>
