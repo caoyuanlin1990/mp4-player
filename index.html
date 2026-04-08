@@ -1,48 +1,31 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MP4在线播放器</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>专用MP4播放器</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif}
-body{background:#111;color:#fff;padding:20px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;padding:20px;font-family:sans-serif}
 .container{max-width:900px;margin:0 auto}
-h2{text-align:center;margin-bottom:20px}
-.area{background:#222;padding:15px;border-radius:8px;margin-bottom:20px}
-input,button{width:100%;padding:12px;margin:6px 0;border:none;border-radius:6px}
-input{background:#333;color:#fff}
-button{background:#007bff;color:#fff;cursor:pointer}
-.video-box{background:#000;border-radius:8px;overflow:hidden}
+.title{text-align:center;margin-bottom:20px}
+.video-box{width:100%;background:#000;border-radius:8px;overflow:hidden}
 video{width:100%;display:block}
 </style>
 </head>
 <body>
 <div class="container">
-  <h2>MP4 在线播放器</h2>
-  <div class="area">
-    <input type="url" id="videoLink" placeholder="粘贴MP4直链地址" />
-    <button onclick="playVideo()">播放视频</button>
-  </div>
+  <h3 class="title">MP4 播放</h3>
   <div class="video-box">
     <video id="player" controls></video>
   </div>
 </div>
 
 <script>
-async function playVideo(){
-  const url = document.getElementById('videoLink').value.trim();
-  if(!url){alert('请输入视频地址');return;}
-  try{
-    const res = await fetch(url,{mode:'cors'});
-    const blob = await res.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    document.getElementById('player').src = blobUrl;
-  }catch(e){
-    alert('跨域或视频不可访问：'+e.message);
-    document.getElementById('player').src = url;
-  }
-}
+const vid = document.getElementById('player');
+const url = 'https://ru.xiaohe1999.dpdns.org/raw/5_6154278803309863868.mp4';
+vid.src = url;
+vid.onerror = ()=>alert('仍解析失败：文件/服务器异常');
 </script>
 </body>
 </html>
