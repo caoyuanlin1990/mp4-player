@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>高级视频播放器</title>
+<title>视频播放</title>
 <style>
   *{
     margin:0;
@@ -11,289 +11,71 @@
     box-sizing:border-box;
   }
   body{
-    background:#0a0a0a;
+    background:#121212;
     min-height:100vh;
     display:flex;
     justify-content:center;
     align-items:center;
-    padding:15px;
-    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    padding:20px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
-  .player-wrapper{
+  .container{
     width:100%;
-    max-width:1100px;
-    position:relative;
-    border-radius:14px;
+    max-width:1000px;
+  }
+  .video-card{
+    background:#1e1e1e;
+    border-radius:16px;
     overflow:hidden;
-    background:#000;
-    box-shadow:0 0 50px rgba(0,0,0,0.7);
+    box-shadow:0 10px 30px rgba(0,0,0,0.5);
   }
-  .video-container{
-    position:relative;
-    width:100%;
+  .video-header{
+    padding:16px 20px;
+    color:#fff;
+    font-size:18px;
+    font-weight:500;
+    border-bottom:1px solid #333;
   }
   video{
     width:100%;
     display:block;
+    outline:none;
   }
-  .controls{
-    position:absolute;
-    bottom:0;
-    left:0;
-    right:0;
-    background:linear-gradient(transparent,rgba(0,0,0,0.8));
-    padding:30px 15px 12px;
-    opacity:0;
-    transition:opacity 0.3s;
-    user-select:none;
-  }
-  .video-container:hover .controls{
-    opacity:1;
-  }
-  .progress-bar{
-    width:100%;
-    height:5px;
-    background:rgba(255,255,255,0.2);
-    border-radius:3px;
-    cursor:pointer;
-    margin-bottom:12px;
-    position:relative;
-    overflow:hidden;
-  }
-  .progress{
-    height:100%;
-    background:#e50914;
-    width:0%;
-    border-radius:3px;
-    transition:width 0.1s;
-  }
-  .control-row{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    color:#fff;
+  .video-footer{
+    padding:14px 20px;
+    color:#aaa;
     font-size:14px;
-  }
-  .control-btn{
-    background:none;
-    border:none;
-    color:#fff;
-    font-size:18px;
-    cursor:pointer;
-    width:34px;
-    height:34px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:50%;
-    transition:background 0.2s;
-  }
-  .control-btn:hover{
-    background:rgba(255,255,255,0.1);
-  }
-  .spacer{
-    flex:1;
-  }
-  .time{
-    font-size:13px;
-    color:#ddd;
-  }
-  .speed{
-    background:rgba(0,0,0,0.5);
-    border:1px solid #555;
-    color:#fff;
-    border-radius:6px;
-    padding:4px 6px;
-    cursor:pointer;
-    font-size:12px;
-  }
-  .volume{
-    display:flex;
-    align-items:center;
-    gap:6px;
-  }
-  .volume-slider{
-    width:70px;
-    height:4px;
-    accent-color:#e50914;
-    cursor:pointer;
-  }
-  .big-play{
-    position:absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    width:70px;
-    height:70px;
-    background:rgba(0,0,0,0.6);
-    border:2px solid #fff;
-    border-radius:50%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:#fff;
-    font-size:30px;
-    cursor:pointer;
-    z-index:2;
-    transition:0.2s;
-  }
-  .big-play:hover{
-    background:rgba(229,9,20,0.7);
-    transform:translate(-50%,-50%) scale(1.08);
-  }
-  .hide{
-    display:none;
+    text-align:center;
   }
 </style>
 </head>
 <body>
 
-<div class="player-wrapper">
-  <div class="video-container" id="container">
-    <video id="v" crossorigin="anonymous"></video>
-    <div class="big-play" id="bigPlay">▶</div>
-    <div class="controls">
-      <div class="progress-bar" id="progressBar">
-        <div class="progress" id="progress"></div>
-      </div>
-      <div class="control-row">
-        <button class="control-btn" id="playBtn">▶</button>
-        
-        <div class="volume">
-          <button class="control-btn" id="volBtn">🔊</button>
-          <input type="range" class="volume-slider" id="volSlider" min="0" max="1" step="0.05" value="1">
-        </div>
-
-        <span class="time" id="time">00:00 / 00:00</span>
-        <div class="spacer"></div>
-        <select class="speed" id="speed">
-          <option value="0.5">0.5x</option>
-          <option value="1" selected>1x</option>
-          <option value="1.25">1.25x</option>
-          <option value="1.5">1.5x</option>
-          <option value="2">2x</option>
-        </select>
-        <button class="control-btn" id="fullscreen">⛶</button>
-      </div>
-    </div>
+<div class="container">
+  <div class="video-card">
+    <div class="video-header">高清视频播放</div>
+    <video id="v" controls crossorigin="anonymous"></video>
+    <div class="video-footer">加载中… 若无法播放请检查网络或视频地址</div>
   </div>
 </div>
 
 <script>
-const v = document.getElementById('v');
-const bigPlay = document.getElementById('bigPlay');
-const playBtn = document.getElementById('playBtn');
-const progress = document.getElementById('progress');
-const progressBar = document.getElementById('progressBar');
-const timeDisplay = document.getElementById('time');
-const speed = document.getElementById('speed');
-const fullscreen = document.getElementById('fullscreen');
-const container = document.getElementById('container');
-const volBtn = document.getElementById('volBtn');
-const volSlider = document.getElementById('volSlider');
+const video = document.getElementById('v');
+const url = 'https://ru.xiaohe1999.dpdns.org/raw/5_6154278803309863868.mp4?t=' + Date.now();
 
-const url = 'https://ru.xiaohe1999.dpdns.org/raw/5_6154278803309863868.mp4;
-const storageKey = "video_last_progress_" + btoa(url);
+video.src = url;
 
-v.src = url;
-
-// 音量控制
-volSlider.addEventListener('input', () => {
-  v.volume = volSlider.value;
-  if(v.volume === 0){
-    volBtn.textContent = "🔇";
-  }else{
-    volBtn.textContent = "🔊";
-  }
-});
-
-volBtn.addEventListener('click', () => {
-  if(v.volume > 0){
-    v.volume = 0;
-    volSlider.value = 0;
-    volBtn.textContent = "🔇";
-  }else{
-    v.volume = 1;
-    volSlider.value = 1;
-    volBtn.textContent = "🔊";
-  }
-});
-
-// 播放/暂停
-function togglePlay(){
-  if(v.paused){
-    v.play().catch(()=>{});
-    playBtn.textContent = '⏸';
-    bigPlay.classList.add('hide');
-  }else{
-    v.pause();
-    playBtn.textContent = '▶';
-    bigPlay.classList.remove('hide');
-  }
-}
-
-bigPlay.onclick = togglePlay;
-playBtn.onclick = togglePlay;
-v.onclick = togglePlay;
-
-// 进度条
-v.ontimeupdate = ()=>{
-  const p = (v.currentTime / v.duration) * 100;
-  progress.style.width = p + '%';
-  timeDisplay.textContent = fmt(v.currentTime) + ' / ' + fmt(v.duration);
-  
-  // 本地存储进度（每2秒存一次）
-  if(Math.floor(v.currentTime) % 2 === 0){
-    localStorage.setItem(storageKey, v.currentTime);
-  }
-};
-
-// 加载记忆进度
-window.onload = () => {
-  const last = localStorage.getItem(storageKey);
-  if(last && !isNaN(last)){
-    v.currentTime = parseFloat(last);
-  }
-};
-
-progressBar.onclick = (e)=>{
-  const rect = progressBar.getBoundingClientRect();
-  const pos = (e.clientX - rect.left) / rect.width;
-  v.currentTime = pos * v.duration;
-};
-
-// 格式化时间
-function fmt(t){
-  if(isNaN(t)) return '00:00';
-  const m = Math.floor(t/60).toString().padStart(2,'0');
-  const s = Math.floor(t%60).toString().padStart(2,'0');
-  return m+':'+s;
-}
-
-// 倍速
-speed.onchange = ()=>{
-  v.playbackRate = parseFloat(speed.value);
-};
-
-// 全屏
-fullscreen.onclick = ()=>{
-  if(document.fullscreenElement){
-    document.exitFullscreen();
-  }else{
-    container.requestFullscreen().catch(()=>{});
-  }
-};
-
-// 错误兜底
-v.onerror = async ()=>{
-  try{
-    const res = await fetch(url,{mode:'cors'});
+video.addEventListener('error', async () => {
+  try {
+    const res = await fetch(url, { mode: 'cors' });
     const blob = await res.blob();
-    v.src = URL.createObjectURL(blob);
-  }catch(e){
-    alert('视频加载失败：跨域或服务器限制');
+    video.src = URL.createObjectURL(blob);
+    video.load();
+  } catch (err) {
+    alert('视频加载失败：跨域限制或服务器不可用');
   }
-};
+});
 </script>
+
 </body>
 </html>
