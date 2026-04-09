@@ -36,36 +36,6 @@
     width:100%;
     display:block;
   }
-
-  /* 加载动画 */
-  .loading{
-    position:absolute;
-    top:0;left:0;right:0;bottom:0;
-    background:rgba(0,0,0,0.6);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    z-index:10;
-    color:#fff;
-    font-size:30px;
-  }
-  .loading::after{
-    content:"";
-    width:50px;
-    height:50px;
-    border:3px solid rgba(255,255,255,0.2);
-    border-top:3px solid #fff;
-    border-radius:50%;
-    animation:spin 1s linear infinite;
-  }
-  @keyframes spin{
-    100%{transform:rotate(360deg)}
-  }
-  .hide{
-    display:none;
-  }
-
-  /* 控制栏 */
   .controls{
     position:absolute;
     bottom:0;
@@ -80,8 +50,6 @@
   .video-container:hover .controls{
     opacity:1;
   }
-
-  /* 进度条 */
   .progress-bar{
     width:100%;
     height:5px;
@@ -99,8 +67,6 @@
     border-radius:3px;
     transition:width 0.1s;
   }
-
-  /* 按钮行 */
   .control-row{
     display:flex;
     align-items:center;
@@ -141,29 +107,17 @@
     cursor:pointer;
     font-size:12px;
   }
-
-  /* 音量条 */
   .volume{
     display:flex;
     align-items:center;
     gap:6px;
   }
-  .volume-bar{
+  .volume-slider{
     width:70px;
     height:4px;
-    background:rgba(255,255,255,0.3);
-    border-radius:2px;
+    accent-color:#e50914;
     cursor:pointer;
-    position:relative;
   }
-  .volume-progress{
-    height:100%;
-    background:#fff;
-    width:100%;
-    border-radius:2px;
-  }
-
-  /* 大播放按钮 */
   .big-play{
     position:absolute;
     top:50%;
@@ -187,13 +141,15 @@
     background:rgba(229,9,20,0.7);
     transform:translate(-50%,-50%) scale(1.08);
   }
+  .hide{
+    display:none;
+  }
 </style>
 </head>
 <body>
 
 <div class="player-wrapper">
   <div class="video-container" id="container">
-    <div class="loading" id="loading"></div>
     <video id="v" crossorigin="anonymous"></video>
     <div class="big-play" id="bigPlay">▶</div>
     <div class="controls">
@@ -204,10 +160,8 @@
         <button class="control-btn" id="playBtn">▶</button>
         
         <div class="volume">
-          <button class="control-btn" id="volBtn" style="font-size:16px;">🔊</button>
-          <div class="volume-bar" id="volumeBar">
-            <div class="volume-progress" id="volumeProgress"></div>
-          </div>
+          <button class="control-btn" id="volBtn">🔊</button>
+          <input type="range" class="volume-slider" id="volSlider" min="0" max="1" step="0.05" value="1">
         </div>
 
         <span class="time" id="time">00:00 / 00:00</span>
@@ -235,39 +189,43 @@ const timeDisplay = document.getElementById('time');
 const speed = document.getElementById('speed');
 const fullscreen = document.getElementById('fullscreen');
 const container = document.getElementById('container');
-const loading = document.getElementById('loading');
 const volBtn = document.getElementById('volBtn');
-const volumeBar = document.getElementById('volumeBar');
-const volumeProgress = document.getElementById('volumeProgress');
+const volSlider = document.getElementById('volSlider');
 
-const VIDEO_KEY = 'video_progress_5_6154278803309863868';
-const url = 'https://ru.xiaohe1999.dpdns.org/raw/5_6154278803309863868.mp4?t=' + Date.now();
+const url = 'https://ru.xiaohe1999.dpdns.org/raw/5_6154278803309863868.mp4;
+const storageKey = "video_last_progress_" + btoa(url);
 
-// 加载视频
 v.src = url;
 
-// 加载动画
-v.addEventListener('waiting', () => loading.classList.remove('hide'));
-v.addEventListener('playing', () => loading.classList.add('hide'));
+// 音量控制
+volSlider.addEventListener('input', () => {
+  v.volume = volSlider.value;
+  if(v.volume === 0){
+    volBtn.textContent = "🔇";
+  }else{
+    volBtn.textContent = "🔊";
+  }
+});
 
-// 记忆播放进度
-const savedTime = localStorage.getItem(VIDEO_KEY);
-if (savedTime && !isNaN(Number(savedTime))) {
-  v.currentTime = Number(savedTime);
-}
-
-// 自动保存进度
-v.addEventListener('timeupdate', () => {
-  localStorage.setItem(VIDEO_KEY, v.currentTime);
+volBtn.addEventListener('click', () => {
+  if(v.volume > 0){
+    v.volume = 0;
+    volSlider.value = 0;
+    volBtn.textContent = "🔇";
+  }else{
+    v.volume = 1;
+    volSlider.value = 1;
+    volBtn.textContent = "🔊";
+  }
 });
 
 // 播放/暂停
-function togglePlay() {
-  if (v.paused) {
-    v.play().catch(() => {});
+function togglePlay(){
+  if(v.paused){
+    v.play().catch(()=>{});
     playBtn.textContent = '⏸';
     bigPlay.classList.add('hide');
-  } else {
+  }else{
     v.pause();
     playBtn.textContent = '▶';
     bigPlay.classList.remove('hide');
@@ -279,70 +237,60 @@ playBtn.onclick = togglePlay;
 v.onclick = togglePlay;
 
 // 进度条
-v.ontimeupdate = () => {
-  const p = (v.currentTime / v.duration) * 100 || 0;
+v.ontimeupdate = ()=>{
+  const p = (v.currentTime / v.duration) * 100;
   progress.style.width = p + '%';
   timeDisplay.textContent = fmt(v.currentTime) + ' / ' + fmt(v.duration);
+  
+  // 本地存储进度（每2秒存一次）
+  if(Math.floor(v.currentTime) % 2 === 0){
+    localStorage.setItem(storageKey, v.currentTime);
+  }
 };
 
-progressBar.onclick = (e) => {
+// 加载记忆进度
+window.onload = () => {
+  const last = localStorage.getItem(storageKey);
+  if(last && !isNaN(last)){
+    v.currentTime = parseFloat(last);
+  }
+};
+
+progressBar.onclick = (e)=>{
   const rect = progressBar.getBoundingClientRect();
   const pos = (e.clientX - rect.left) / rect.width;
   v.currentTime = pos * v.duration;
 };
 
-// 时间格式化
-function fmt(t) {
-  if (isNaN(t)) return '00:00';
-  const m = Math.floor(t / 60).toString().padStart(2, '0');
-  const s = Math.floor(t % 60).toString().padStart(2, '0');
-  return m + ':' + s;
+// 格式化时间
+function fmt(t){
+  if(isNaN(t)) return '00:00';
+  const m = Math.floor(t/60).toString().padStart(2,'0');
+  const s = Math.floor(t%60).toString().padStart(2,'0');
+  return m+':'+s;
 }
 
 // 倍速
-speed.onchange = () => {
+speed.onchange = ()=>{
   v.playbackRate = parseFloat(speed.value);
 };
 
 // 全屏
-fullscreen.onclick = () => {
-  if (document.fullscreenElement) {
+fullscreen.onclick = ()=>{
+  if(document.fullscreenElement){
     document.exitFullscreen();
-  } else {
-    container.requestFullscreen().catch(() => {});
+  }else{
+    container.requestFullscreen().catch(()=>{});
   }
 };
 
-// 音量控制
-v.volume = 1;
-volumeProgress.style.width = '100%';
-
-volBtn.onclick = () => {
-  v.muted = !v.muted;
-  volBtn.textContent = v.muted ? '🔇' : '🔊';
-};
-
-volumeBar.onclick = (e) => {
-  const rect = volumeBar.getBoundingClientRect();
-  const vol = (e.clientX - rect.left) / rect.width;
-  v.volume = Math.max(0, Math.min(1, vol));
-  v.muted = false;
-  volBtn.textContent = '🔊';
-  volumeProgress.style.width = (v.volume * 100) + '%';
-};
-
-v.addEventListener('volumechange', () => {
-  volumeProgress.style.width = (v.volume * 100) + '%';
-  volBtn.textContent = v.muted || v.volume === 0 ? '🔇' : '🔊';
-});
-
 // 错误兜底
-v.onerror = async () => {
-  try {
-    const res = await fetch(url, { mode: 'cors' });
+v.onerror = async ()=>{
+  try{
+    const res = await fetch(url,{mode:'cors'});
     const blob = await res.blob();
     v.src = URL.createObjectURL(blob);
-  } catch (e) {
+  }catch(e){
     alert('视频加载失败：跨域或服务器限制');
   }
 };
