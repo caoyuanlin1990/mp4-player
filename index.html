@@ -3,158 +3,120 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>多源视频播放器 · 专业版</title>
+<title>多源视频播放器</title>
 <style>
   * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
   }
-
   body {
     background: #0f172a;
-    color: #f1f5f9;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif;
-    padding: 20px 15px;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    color: #f1f5f9;
   }
-
-  .card {
-    width: 100%;
-    max-width: 1000px;
+  .header {
     background: #1e293b;
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-  }
-
-  .card-header {
-    padding: 22px 28px;
+    padding: 16px 24px;
     border-bottom: 1px solid #334155;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
   }
-
-  .card-header h1 {
-    font-size: 22px;
+  .header h1 {
+    font-size: 20px;
     font-weight: 600;
   }
-
-  .video-wrap {
+  .video-container {
     position: relative;
+    width: 100%;
     background: #000;
   }
-
   video {
     width: 100%;
     height: auto;
     display: block;
   }
-
   .loading {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.6);
+    inset: 0;
+    background: rgba(0,0,0,0.7);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 16px;
-    color: #fff;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s;
   }
-
   .loading.show {
     opacity: 1;
   }
-
   .controls {
-    padding: 26px;
+    padding: 20px 24px;
+    background: #1e293b;
   }
-
-  .row {
-    display: grid;
-    grid-template-columns: 1fr 140px;
+  .control-row {
+    display: flex;
     gap: 12px;
+    max-width: 1200px;
+    margin: 0 auto;
   }
-
   select {
+    flex: 1;
     padding: 14px 16px;
     background: #334155;
     color: #f1f5f9;
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     font-size: 15px;
     outline: none;
-    cursor: pointer;
   }
-
-  .btn {
-    padding: 14px 18px;
+  button {
+    padding: 14px 24px;
     background: #3b82f6;
     color: #fff;
     font-weight: 500;
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     cursor: pointer;
     transition: background 0.2s;
+    white-space: nowrap;
   }
-
-  .btn:hover {
+  button:hover {
     background: #2563eb;
   }
-
-  @media (max-width: 600px) {
-    .row {
-      grid-template-columns: 1fr;
+  @media (max-width: 640px) {
+    .control-row {
+      flex-direction: column;
     }
   }
 </style>
 </head>
-
 <body>
-
-<div class="card">
-  <div class="card-header">
-    <h1>多源视频播放器</h1>
-  </div>
-
-  <div class="video-wrap">
-    <video id="videoPlayer" controls></video>
-    <div class="loading" id="loading">加载中...</div>
-  </div>
-
-  <div class="controls">
-    <div class="row">
-      <select id="playlist"></select>
-      <button class="btn" onclick="changeSource()">切换播放</button>
-    </div>
+<div class="header">
+  <h1>多源视频播放器</h1>
+</div>
+<div class="video-container">
+  <video id="videoPlayer" controls></video>
+  <div class="loading" id="loading">加载中...</div>
+</div>
+<div class="controls">
+  <div class="control-row">
+    <select id="playlist"></select>
+    <button onclick="changeSource()">切换播放</button>
   </div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 <script>
   const video = document.getElementById('videoPlayer');
   const loading = document.getElementById('loading');
   const playlistEl = document.getElementById('playlist');
   let hls = null;
-
   const channels = [
     { name: "旺苍新闻综合", url: "https://channel.wcrmt.cn/nmip-media/channellive/channel105268/playlist.m3u8" },
     { name: "绍兴公共", url: "https://live.shaoxing.com.cn/video/s10001-sxtv2/index.m3u8" },
     { name: "浙江少儿 1080P", url: "https://ali-m-l.cztv.com/channels/lantian/channel008/1080p.m3u8" },
-    { name: "青川综合", url: "http://qcfile.qcrmt.com/nmip-media/channellive/channel100933/playlist.m3u8" },
+    { name: "青川新闻综合", url: "http://qcfile.qcrmt.com/nmip-media/channellive/channel100933/playlist.m3u8" },
     { name: "测试MP4", url: "https://ru.xiaohe1999.dpdns.org/raw/VID_20260409_222058_709.mp4" },
   ];
-
   function renderList() {
     playlistEl.innerHTML = '';
     channels.forEach(item => {
@@ -166,25 +128,20 @@
     const last = localStorage.getItem('lastSource');
     if (last) playlistEl.value = last;
   }
-
   function showLoading(flag) {
     loading.classList.toggle('show', flag);
   }
-
   function changeSource() {
     const url = playlistEl.value;
     if (!url) return;
-
     localStorage.setItem('lastSource', url);
     showLoading(true);
-
     if (hls) {
       hls.destroy();
       hls = null;
     }
     video.pause();
     video.src = '';
-
     if (url.includes('.m3u8')) {
       if (Hls.isSupported()) {
         hls = new Hls();
@@ -194,17 +151,19 @@
           video.play().finally(() => showLoading(false));
         });
         hls.on(Hls.Events.ERROR, () => {
-          alert('播放失败，源可能失效');
+          alert('播放失败：源可能失效');
           showLoading(false);
         });
       }
     } else {
       video.src = url;
       video.load();
-      video.play().finally(() => showLoading(false));
+      video.play().finally(() => showLoading(false)).catch(() => {
+        alert('视频播放失败');
+        showLoading(false);
+      });
     }
   }
-
   window.addEventListener('DOMContentLoaded', () => {
     renderList();
     changeSource();
