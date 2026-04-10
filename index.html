@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>多源视频播放器</title>
+<title>多源视频播放器 · 专业版</title>
 <style>
   * {
     margin: 0;
@@ -13,26 +13,39 @@
 
   body {
     background: #0f172a;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif;
     color: #f1f5f9;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif;
+    padding: 20px 15px;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  /* 顶部标题栏 */
-  .header {
+  .card {
+    width: 100%;
+    max-width: 1000px;
     background: #1e293b;
-    padding: 16px 24px;
-    border-bottom: 1px solid #334155;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
   }
 
-  .header h1 {
-    font-size: 20px;
+  .card-header {
+    padding: 22px 28px;
+    border-bottom: 1px solid #334155;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .card-header h1 {
+    font-size: 22px;
     font-weight: 600;
   }
 
-  /* 视频区域 */
-  .video-container {
+  .video-wrap {
     position: relative;
-    width: 100%;
     background: #000;
   }
 
@@ -44,12 +57,16 @@
 
   .loading {
     position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 16px;
+    color: #fff;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s;
@@ -59,49 +76,45 @@
     opacity: 1;
   }
 
-  /* 控制栏 */
   .controls {
-    padding: 20px 24px;
-    background: #1e293b;
+    padding: 26px;
   }
 
-  .control-row {
-    display: flex;
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 140px;
     gap: 12px;
-    max-width: 1200px;
-    margin: 0 auto;
   }
 
   select {
-    flex: 1;
     padding: 14px 16px;
     background: #334155;
     color: #f1f5f9;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 15px;
     outline: none;
+    cursor: pointer;
   }
 
-  button {
-    padding: 14px 24px;
+  .btn {
+    padding: 14px 18px;
     background: #3b82f6;
     color: #fff;
     font-weight: 500;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     cursor: pointer;
     transition: background 0.2s;
-    white-space: nowrap;
   }
 
-  button:hover {
+  .btn:hover {
     background: #2563eb;
   }
 
-  @media (max-width: 640px) {
-    .control-row {
-      flex-direction: column;
+  @media (max-width: 600px) {
+    .row {
+      grid-template-columns: 1fr;
     }
   }
 </style>
@@ -109,19 +122,21 @@
 
 <body>
 
-<div class="header">
-  <h1>多源视频播放器</h1>
-</div>
+<div class="card">
+  <div class="card-header">
+    <h1>多源视频播放器</h1>
+  </div>
 
-<div class="video-container">
-  <video id="videoPlayer" controls></video>
-  <div class="loading" id="loading">加载中...</div>
-</div>
+  <div class="video-wrap">
+    <video id="videoPlayer" controls></video>
+    <div class="loading" id="loading">加载中...</div>
+  </div>
 
-<div class="controls">
-  <div class="control-row">
-    <select id="playlist"></select>
-    <button onclick="changeSource()">切换播放</button>
+  <div class="controls">
+    <div class="row">
+      <select id="playlist"></select>
+      <button class="btn" onclick="changeSource()">切换播放</button>
+    </div>
   </div>
 </div>
 
@@ -179,17 +194,14 @@
           video.play().finally(() => showLoading(false));
         });
         hls.on(Hls.Events.ERROR, () => {
-          alert('播放失败：源可能失效');
+          alert('播放失败，源可能失效');
           showLoading(false);
         });
       }
     } else {
       video.src = url;
       video.load();
-      video.play().finally(() => showLoading(false)).catch(() => {
-        alert('视频播放失败');
-        showLoading(false);
-      });
+      video.play().finally(() => showLoading(false));
     }
   }
 
@@ -198,6 +210,5 @@
     changeSource();
   });
 </script>
-
 </body>
 </html>
