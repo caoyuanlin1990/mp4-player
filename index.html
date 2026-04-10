@@ -3,38 +3,71 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>视频播放</title>
+<title>多源播放器</title>
 <style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{background:#000;padding:20px}
-  .video-wrap{max-width:1000px;margin:0 auto}
-  video{width:100%;display:block;border-radius:8px}
+    body {
+        background: #0b101a;
+        color: #eaeaea;
+        font-family: "Microsoft YaHei", sans-serif;
+        padding: 10px;
+    }
+    .container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    .play-box {
+        background: #121a29;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    video {
+        width: 100%;
+        display: block;
+    }
+    .playlist {
+        padding: 10px;
+    }
+    .playlist select {
+        width: 100%;
+        padding: 8px;
+        background: #1e2a3a;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+    }
+    .btn {
+        margin-top: 8px;
+        padding: 8px 12px;
+        background: #2d5dff;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+    }
 </style>
 </head>
 <body>
-<div class="video-wrap">
-  <video id="v" controls></video>
+<div class="container">
+    <div class="play-box">
+        <video id="videoPlayer" controls autoplay muted></video>
+    </div>
+    <div class="playlist">
+        <select id="playlist">
+            <option value="http://qcfile.qcrmt.com/nmip-media/channellive/channel100933/playlist.m3u8">青川综合</option>
+            <option value="https://ru.xiaohe1999.dpdns.org/raw/VID_20260409_222058_709.mp4">测试MP4视频</option>
+        </select>
+        <button class="btn" onclick="changeSource()">切换播放</button>
+    </div>
 </div>
 
 <script>
-const video = document.getElementById('v');
-// 加时间戳强制不使用缓存
-const url = 'https://ru.xiaohe1999.dpdns.org/raw/VID_20260409_222058_709.mp4'
-+'?t='+new Date().getTime();
-
-// 尝试直接播放
-video.src = url;
-
-// 失败后再用跨域兼容方式
-video.onerror = async () => {
-  try {
-    const res = await fetch(url, { mode: "cors" });
-    const blob = await res.blob();
-    video.src = URL.createObjectURL(blob);
-  } catch (e) {
-    alert("视频无法播放：服务器限制或跨域拦截");
-  }
-};
+    const video = document.getElementById('videoPlayer');
+    function changeSource() {
+        const url = document.getElementById('playlist').value;
+        video.src = url;
+        video.load();
+        video.play();
+    }
 </script>
 </body>
 </html>
