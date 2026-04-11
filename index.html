@@ -6,7 +6,7 @@
 <title>Windows Media Player - XP</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:"Tahoma","Microsoft Sans Serif","宋体",sans-serif;font-size:12px}
-body{background:#1464A6;padding:20px 0;display:flex;justify-content:center;align-items:center}
+body{background:#1464A6;padding:20px 0;display:flex;justify-content:center;align-items:center;min-height:100vh}
 .xp-wmp-container{width:580px;background:#ECE9D8;border:6px solid #94A6CE;border-radius:3px;box-shadow:0 0 10px rgba(0,0,0,0.3);overflow:hidden}
 .xp-title-bar{background:linear-gradient(to bottom,#0A58C5,#3293F9);height:24px;padding:0 8px;display:flex;align-items:center;color:#FFF;font-weight:bold;user-select:none}
 .title-text{display:flex;align-items:center;gap:6px}
@@ -15,7 +15,7 @@ body{background:#1464A6;padding:20px 0;display:flex;justify-content:center;align
 .xp-menu-bar span{padding:2px 5px;cursor:pointer}
 .xp-menu-bar span:hover{background:#316AC5;color:#FFF}
 .video-section{position:relative;background:#000;border:2px inset #FFF;margin:6px;height:280px}
-video{width:100%;height:100%;display:block}
+video{width:100%;height:100%;display:block;object-fit:contain}
 .loading-tip{position:absolute;inset:0;background:rgba(0,0,0,0.8);color:#FFF;display:grid;place-items:center;font-size:13px;opacity:0;pointer-events:none;transition:opacity 0.2s ease}
 .loading-tip.show{opacity:1}
 .playlist-section{background:#FFF;border:1px solid #7F9DB9;margin:0 6px 6px;padding:3px;height:80px;overflow-y:auto}
@@ -49,14 +49,17 @@ video{width:100%;height:100%;display:block}
   </div>
 
   <div class="video-section">
-    <video id="videoPlayer"></video>
+    <video id="videoPlayer" controlslist="nodownload nofullscreen"></video>
     <div class="loading-tip" id="loadingTip">正在加载...</div>
   </div>
 
+  <!-- 播放列表区域 -->
   <div class="playlist-section" id="playlistWrap">
     <div class="playlist-item" data-url="https://channel.wcrmt.cn/nmip-media/channellive/channel105268/playlist.m3u8">旺苍新闻综合</div>
     <div class="playlist-item" data-url="https://live.shaoxing.com.cn/video/s10001-sxtv2/index.m3u8">绍兴公共</div>
-    <div class="playlist-item" data-url="https://qcfile.qcrmt.com/nmip-media/channellive/channel100933/playlist.m3u8">青川综合</div>
+    <!-- 已将此处的 "青川综合" 重命名为 "朝天" -->
+    <div class="playlist-item" data-url="https://qcfile.qcrmt.com/nmip-media/channellive/channel100933/playlist.m3u8">青川综合频道</div>
+    <div class="playlist-item" data-url="https://m3u8.channel.dzsm.com/nmip-media/channellive/channel104601/playlist.m3u8">朝天综合频道</div>
     <div class="playlist-item" data-url="https://ru.xiaohe1999.dpdns.org/raw/VID_20260409_222058_709.mp4">测试MP4视频</div>
   </div>
 
@@ -82,7 +85,7 @@ video{width:100%;height:100%;display:block}
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.14/dist/hls.min.js"></script>
 <script>
-const video=document.getElementById('videoPlayer');const loadingTip=document.getElementById('loadingTip');const progressBar=document.getElementById('progressBar');const progressWrap=document.getElementById('progressWrap');const volumeSlider=document.getElementById('volume-slider');const timeDisplay=document.getElementById('timeDisplay');const playBtn=document.getElementById('playBtn');const pauseBtn=document.getElementById('pauseBtn');const stopBtn=document.getElementById('stopBtn');const fullscreenBtn=document.getElementById('fullscreenBtn');const playlistItems=document.querySelectorAll('.playlist-item');let hls=null;let currentUrl='';video.volume=volumeSlider.value;function showLoading(flag){loadingTip.classList.toggle('show',flag)}function formatTime(seconds){if(isNaN(seconds))return"00:00";const min=Math.floor(seconds/60).toString().padStart(2,'0');const sec=Math.floor(seconds%60).toString().padStart(2,'0');return`${min}:${sec}`}function updateTime(){const current=formatTime(video.currentTime);const total=formatTime(video.duration);timeDisplay.textContent=`${current} / ${total}`}function updateProgress(){if(!video.duration)return;const percent=(video.currentTime/video.duration)*100;progressBar.style.width=`${percent}%`}function changeVideoSource(url){if(!url||url===currentUrl)return;currentUrl=url;if(hls){hls.destroy();hls=null}video.pause();video.src='';showLoading(true);playlistItems.forEach(item=>{item.classList.toggle('active',item.dataset.url===url)});try{if(url.includes('.m3u8')){if(!Hls.isSupported()){alert('当前浏览器不支持m3u8直播播放');showLoading(false);return}hls=new Hls();hls.loadSource(url);hls.attachMedia(video);hls.on(Hls.Events.MANIFEST_PARSED,()=>{video.play().catch(err=>console.warn('自动播放受限，请点击播放'));showLoading(false)});hls.on(Hls.Events.ERROR,(_,data)=>{if(data.fatal){alert('直播源加载失败或已失效');showLoading(false)}})}else{video.src=url;video.play().catch(err=>console.warn('自动播放受限，请点击播放'));showLoading(false)}}catch(error){console.error('播放失败',error);alert('视频播放失败');showLoading(false)}}progressWrap.addEventListener('click',(e)=>{if(!video.duration)return;const rect=progressWrap.getBoundingClientRect();const pos=(e.clientX-rect.left)/rect.width;video.currentTime=pos*video.duration});volumeSlider.addEventListener('input',()=>{video.volume=volumeSlider.value});playBtn.addEventListener('click',()=>{if(!video.src){changeVideoSource(playlistItems[0].dataset.url);return}video.play().catch(console.warn)});pauseBtn.addEventListener('click',()=>{video.pause()});stopBtn.addEventListener('click',()=>{video.pause();video.currentTime=0;progressBar.style.width='0%';updateTime()});fullscreenBtn.addEventListener('click',()=>{const container=document.querySelector('.xp-wmp-container');if(!document.fullscreenElement){container.requestFullscreen().catch(console.warn)}else{document.exitFullscreen()}});playlistItems.forEach(item=>{item.addEventListener('click',()=>{changeVideoSource(item.dataset.url)})});video.addEventListener('timeupdate',()=>{updateProgress();updateTime()});video.addEventListener('loadedmetadata',updateTime);window.addEventListener('DOMContentLoaded',()=>{changeVideoSource(playlistItems[0].dataset.url)});
+const video=document.getElementById('videoPlayer');const loadingTip=document.getElementById('loadingTip');const progressBar=document.getElementById('progressBar');const progressWrap=document.getElementById('progressWrap');const volumeSlider=document.getElementById('volume-slider');const timeDisplay=document.getElementById('timeDisplay');const playBtn=document.getElementById('playBtn');const pauseBtn=document.getElementById('pauseBtn');const stopBtn=document.getElementById('stopBtn');const fullscreenBtn=document.getElementById('fullscreenBtn');const playlistItems=document.querySelectorAll('.playlist-item');let hls=null;let currentUrl='';video.volume=volumeSlider.value;function showLoading(flag){loadingTip.classList.toggle('show',flag)}function formatTime(seconds){if(isNaN(seconds))return"00:00";const min=Math.floor(seconds/60).toString().padStart(2,'0');const sec=Math.floor(seconds%60).toString().padStart(2,'0');return`${min}:${sec}`}function updateTime(){const current=formatTime(video.currentTime);const total=formatTime(video.duration);timeDisplay.textContent=`${current} / ${total}`}function updateProgress(){if(!video.duration)return;const percent=(video.currentTime/video.duration)*100;progressBar.style.width=`${percent}%`}function changeVideoSource(url){if(!url||url===currentUrl)return;currentUrl=url;if(hls){hls.destroy();hls=null}video.pause();video.src='';showLoading(true);playlistItems.forEach(item=>{item.classList.toggle('active',item.dataset.url===url)});try{if(url.includes('.m3u8')){if(!Hls.isSupported()){alert('当前浏览器不支持m3u8直播播放');showLoading(false);return}hls=new Hls();hls.loadSource(url);hls.attachMedia(video);hls.on(Hls.Events.MANIFEST_PARSED,()=>{showLoading(false)});hls.on(Hls.Events.ERROR,(_,data)=>{if(data.fatal){alert('直播源加载失败或已失效');showLoading(false)}})}else{video.src=url;showLoading(false)}}catch(error){console.error('播放失败',error);alert('视频播放失败');showLoading(false)}}progressWrap.addEventListener('click',(e)=>{if(!video.duration)return;const rect=progressWrap.getBoundingClientRect();const pos=(e.clientX-rect.left)/rect.width;video.currentTime=pos*video.duration});volumeSlider.addEventListener('input',()=>{video.volume=volumeSlider.value});playBtn.addEventListener('click',()=>{if(!video.src){changeVideoSource(playlistItems[0].dataset.url);setTimeout(()=>{video.play().catch(console.warn)},100);return}video.play().catch(console.warn)});pauseBtn.addEventListener('click',()=>{video.pause()});stopBtn.addEventListener('click',()=>{video.pause();video.currentTime=0;progressBar.style.width='0%';updateTime()});fullscreenBtn.addEventListener('click',()=>{const container=document.querySelector('.xp-wmp-container');if(!document.fullscreenElement){container.requestFullscreen().catch(console.warn)}else{document.exitFullscreen()}});playlistItems.forEach(item=>{item.addEventListener('click',()=>{changeVideoSource(item.dataset.url)})});video.addEventListener('timeupdate',()=>{updateProgress();updateTime()});video.addEventListener('loadedmetadata',updateTime);window.addEventListener('DOMContentLoaded',()=>{changeVideoSource(playlistItems[0].dataset.url)});
 </script>
 </body>
 </html>
