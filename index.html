@@ -3,156 +3,127 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>多源视频播放器</title>
+<title> 多源视频播放器</title>
 <style>
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
-  body {
-    background: #f8fafc;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif;
-    color: #1e293b;
-  }
-
-  .page-wrap {
-    max-width: 950px;
-    margin: 40px auto;
-    padding: 0 20px;
-  }
-
-  .page-title {
-    font-size: 26px;
-    text-align: center;
-    margin-bottom: 24px;
-    color: #0f172a;
-  }
-
-  .player-main {
-    background: #fff;
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  }
-
-  .video-section {
-    position: relative;
-    background: #000;
-  }
-
-  video {
-    width: 100%;
-    height: auto;
-    display: block;
-  }
-
-  #fullscreenBtn {
-    position: absolute;
-    bottom: 18px;
-    right: 20px;
-    background: rgba(0,0,0,0.6);
-    color: #fff;
-    border: none;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    font-size: 16px;
-    cursor: pointer;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  #fullscreenBtn:hover {
-    background: rgba(0,0,0,0.8);
-  }
-
-  .loading-tip {
-    position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-size: 16px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s;
-  }
-
-  .loading-tip.show {
-    opacity: 1;
-  }
-
-  .control-section {
-    padding: 24px;
-  }
-
-  #playlist {
-    width: 100%;
-    padding: 14px;
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    font-size: 15px;
-    outline: none;
-  }
-
-  .progress-wrap {
-    width: 100%;
-    height: 7px;
-    background: #e2e8f0;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-top: 16px;
-    overflow: hidden;
-  }
-
-  .progress-bar {
-    height: 100%;
-    background: #3b82f6;
-    width: 0%;
-    transition: width 0.1s;
-  }
-
-  .volume-control {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 16px;
-  }
-
-  #volume-slider {
-    flex: 1;
-    accent-color: #3b82f6;
-  }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+body {
+  background: #1464A6;
+  font-family: "Microsoft Sans Serif", "宋体", sans-serif;
+  font-size: 12px;
+  color: #000;
+  padding: 30px 0;
+}
+.player-main {
+  max-width: 700px;
+  margin: 0 auto;
+  background: #ECE9D8;
+  border: 6px solid #94A6CE;
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  overflow: hidden;
+}
+.xp-title-bar {
+  background: linear-gradient(to bottom, #0A58C5, #3293F9);
+  height: 26px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  color: #FFF;
+  font-weight: bold;
+}
+.video-section {
+  position: relative;
+  background: #000;
+  border: 2px inset #FFF;
+  margin: 8px;
+}
+video {
+  width: 100%;
+  display: block;
+}
+#fullscreenBtn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: linear-gradient(to bottom, #E6E6E6, #CCC);
+  border: 1px solid #666;
+  box-shadow: inset 1px 1px 0 #FFF, inset -1px -1px 0 #888;
+  padding: 2px 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.loading-tip {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  color: #FFF;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  pointer-events: none;
+}
+.loading-tip.show { opacity: 1; }
+.control-section {
+  padding: 10px;
+}
+#playlist {
+  width: 100%;
+  padding: 3px 4px;
+  border: 1px solid #7F9DB9;
+  background: #FFF;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.progress-wrap {
+  width: 100%;
+  height: 12px;
+  background: #FFF;
+  border: 1px solid #7F9DB9;
+  cursor: pointer;
+}
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(to right, #3A85FF, #5A9CFF);
+  width: 0%;
+}
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+#volume-slider {
+  flex: 1;
+  accent-color: #3A85FF;
+}
 </style>
 </head>
-
 <body>
 
-<div class="page-wrap">
-  <h2 class="page-title">🎬 多源视频播放器</h2>
-  <div class="player-main">
-    <div class="video-section">
-      <video id="videoPlayer" controls></video>
-      <button id="fullscreenBtn">⛶</button>
-      <div class="loading-tip" id="loadingTip">加载中...</div>
-    </div>
+<div class="player-main">
+  <div class="xp-title-bar">
+    🎬 Windows XP 视频播放器
+  </div>
 
-    <div class="control-section">
-      <select id="playlist"></select>
-      <div class="progress-wrap" id="progressWrap">
-        <div class="progress-bar" id="progressBar"></div>
-      </div>
-      <div class="volume-control">
-        <span>音量</span>
-        <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1">
-      </div>
+  <div class="video-section">
+    <video id="videoPlayer" controls></video>
+    <button id="fullscreenBtn">全屏</button>
+    <div class="loading-tip" id="loadingTip">加载中...</div>
+  </div>
+
+  <div class="control-section">
+    <select id="playlist"></select>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="volume-control">
+      <span>音量:</span>
+      <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1">
     </div>
   </div>
 </div>
@@ -196,52 +167,35 @@
     localStorage.setItem('lastVideoSource', url);
     showLoading(true);
 
-    if (hls) {
-      hls.destroy();
-      hls = null;
-    }
-
-    video.pause();
-    video.src = '';
+    if (hls) { hls.destroy(); hls = null; }
+    video.pause(); video.src = '';
 
     try {
       if (url.includes('.m3u8')) {
-        if (!Hls.isSupported()) {
-          alert('浏览器不支持m3u8播放');
-          showLoading(false);
-          return;
-        }
+        if (!Hls.isSupported()) { alert('浏览器不支持m3u8'); showLoading(false); return; }
         hls = new Hls();
         hls.loadSource(url);
         hls.attachMedia(video);
-
-        hls.on(Hls.Events.MANIFEST_PARSED, async () => {
-          await video.play().catch(console.warn);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(console.warn);
           showLoading(false);
         });
-
-        hls.on(Hls.Events.ERROR, () => {
-          alert('视频加载失败');
-          showLoading(false);
-        });
+        hls.on(Hls.Events.ERROR, () => { alert('视频加载失败'); showLoading(false); });
       } else {
         video.src = url;
         await video.play().catch(console.warn);
         showLoading(false);
       }
     } catch (e) {
-      alert('播放失败，请手动点击播放');
+      alert('播放失败，请手动点击');
       showLoading(false);
     }
   }
 
   function toggleFullScreen() {
-    const container = document.querySelector('.player-main');
-    if (!document.fullscreenElement) {
-      container.requestFullscreen().catch(console.log);
-    } else {
-      document.exitFullscreen();
-    }
+    const el = document.querySelector('.player-main');
+    if (!document.fullscreenElement) el.requestFullscreen();
+    else document.exitFullscreen();
   }
 
   fullscreenBtn.addEventListener('click', toggleFullScreen);
@@ -263,8 +217,6 @@
   window.addEventListener('DOMContentLoaded', () => {
     renderSourceList();
     changeVideoSource(playlist.value);
-
-    // 切换列表自动播放
     playlist.addEventListener('change', () => {
       changeVideoSource(playlist.value);
     });
