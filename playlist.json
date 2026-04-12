@@ -12,6 +12,10 @@
     "url": "https://qcfile.qcrmt.com/nmip-media/channellive/channel100933/playlist.m3u8"
   },
   {
+    "name": "广安综合",
+    "url": "http://live1.gatv.com.cn:85/live/XWZH.m3u8"
+  },
+  {
     "name": "测试视频",
     "url": "https://ru.xiaohe1999.dpdns.org/raw/1000092916.mp4"
   },
@@ -30,9 +34,5 @@
   {
     "name": "春晚2002",
     "url": "https://alimov2.a.kwimgs.com/upic/2023/01/13/21/BMjAyMzAxMTMyMTE4MzRfNDAzMDAxOTlfOTM1MDY4ODIxNDdfMF8z_b_Ba6271d10b7e6cfae83759033a091f257.mp4"
-  },
-  {
-    "name": "短片圣诞兔兔",
-    "url": "https://oss.rw.bbmmic2.com/data/20230127/JnUEZ6Of/hls/index.m3u8"
   }
 ]
