@@ -8,6 +8,10 @@
     "url": "https://live.shaoxing.com.cn/video/s10001-sxtv2/index.m3u8"
   },
   {
+    "name": "绍兴影视",
+    "url": "https://live.shaoxing.com.cn/video/s10001-sxtv3/index.m3u8"
+  },
+  {
     "name": "青川综合",
     "url": "https://qcfile.qcrmt.com/nmip-media/channellive/channel100933/playlist.m3u8"
   },
@@ -17,7 +21,7 @@
   },
   {
     "name": "春晚1983",
-    "url": "https://alimov2.a.kwimgs.com/upic/2022/01/31/15/BMjAyMjAxMzExNTU5MTRfNDAzMDAxOTlfNjYyNzMxNjcwMjBfMF8z_b_Beb3bda599f76c60c463c433ca760153.mp4"
+    "url": "https://alimov2.a.kwimgs.com/upic/2022/01/31/15/BMjAyMjAxMzExNTU5MTRfNDAzMDAxOTlfNjYyNzMxNjcwMjBfMF8z_b_Beb3bda599f76c60c463c433ca7460153.mp4"
   },
   {
     "name": "春晚1987",
@@ -38,9 +42,5 @@
   {
     "name": "广元文化生活",
     "url": "https://m3u8.channel.dzsm.com/nmip-media/channellive/channel101257/playlist.m3u8"
-  },
-  {
-    "name": "山西黎城综合",
-    "url": "http://111.53.96.67:8081/live/1/index.m3u8"
   }
 ]
