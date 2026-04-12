@@ -10,7 +10,7 @@ body{background:#1464A6;padding:20px 0;display:flex;justify-content:center;align
 .xp-wmp-container{width:580px;background:#ECE9D8;border:6px solid #94A6CE;border-radius:3px;box-shadow:0 0 10px rgba(0,0,0,0.3);overflow:hidden}
 .xp-title-bar{background:linear-gradient(to bottom,#0A58C5,#3293F9);height:24px;padding:0 8px;display:flex;align-items:center;color:#FFF;font-weight:bold;user-select:none}
 .title-text{display:flex;align-items:center;gap:6px}
-.title-icon{width:16px;height:16px;background:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g0IjAgMCAxNiAxNiIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0yIDN2MTBoMTJWM0gyem0xIDFoMTB2OEgzVjR6bTQgM2wxIDF2M2wtMSAxSDYsLTFtMi00djQiLz48L3N2Zz4=') no-repeat center}
+.title-icon{width:16px;height:16px;background:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0yIDN2MTBoMTJWM0gyem0xIDFoMTB2OEgzVjR6bTQgM2wxIDF2M2wtMSAxSDZsLTFtMi00djQiLz48L3N2Zz4=') no-repeat center center}
 .xp-menu-bar{background:#ECE9D8;border-bottom:1px solid #ACA899;padding:2px 6px;display:flex;gap:12px}
 .xp-menu-bar span{padding:2px 5px;cursor:pointer}
 .xp-menu-bar span:hover{background:#316AC5;color:#FFF}
@@ -31,8 +31,8 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .time-display{color:#000;min-width:100px;text-align:center;font-size:11px}
 .volume-wrap{display:flex;align-items:center;gap:5px}
 .volume-wrap span{color:#000;font-size:11px}
-#volume-slider{width:80px;accent-color:#3A85FF;height:10px}
-#fullscreenBtn{min-width:50px}
+#volume-slider{width:80px;accent-color:#3A85FF;height:10px;-webkit-appearance:none}
+#volume-slider::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;background:#3A85FF;border-radius:2px}
 
 @media (max-width:600px){
   .xp-wmp-container{width:95%}
@@ -58,14 +58,13 @@ video{width:100%;height:100%;display:block;object-fit:contain}
     <span>文件(F)</span><span>查看(V)</span><span>播放(P)</span><span>工具(T)</span><span>帮助(H)</span>
   </div>
   <div class="video-section">
-    <video id="videoPlayer" muted playsinline webkit-playsinline></video>
+    <video id="videoPlayer" playsinline></video>
     <div class="loading-tip" id="loadingTip">正在加载...</div>
   </div>
   <div class="playlist-section" id="playlistWrap">
     <div class="playlist-item" data-url="https://channel.wcrmt.cn/nmip-media/channellive/channel105268/playlist.m3u8">旺苍新闻综合</div>
     <div class="playlist-item" data-url="https://live.shaoxing.com.cn/video/s10001-sxtv2/index.m3u8">绍兴公共</div>
     <div class="playlist-item" data-url="https://qcfile.qcrmt.com/nmip-media/channellive/channel100933/playlist.m3u8">青川综合</div>
-    <div class="playlist-item" data-url="https://m3u8.channel.dzsm.com/nmip-media/channellive/channel104601/playlist.m3u8">朝天综合</div>
     <div class="playlist-item" data-url="https://ru.xiaohe1999.dpdns.org/raw/1000092916.mp4">测试视频</div>
   </div>
   <div class="controls-section">
@@ -103,10 +102,14 @@ const playlistItems = document.querySelectorAll('.playlist-item');
 
 let hls = null;
 let currentUrl = '';
-video.volume = volumeSlider.value;
+
+// 🔥 修复：默认音量100%，不静音
+video.volume = 1.0;
+volumeSlider.value = 1.0;
+video.muted = false;
 
 function showLoading(flag) {
-  loadingTip.classList.toggle('show', flag);
+  loadingTip.classList.toggle('show', !!flag);
 }
 
 function formatTime(seconds) {
@@ -118,7 +121,7 @@ function formatTime(seconds) {
 
 function updateTime() {
   const current = formatTime(video.currentTime);
-  const total = video.duration && isFinite(video.duration) ? formatTime(video.duration) : "直播";
+  const total = (video.duration && isFinite(video.duration)) ? formatTime(video.duration) : "直播";
   timeDisplay.textContent = current + " / " + total;
 }
 
@@ -132,28 +135,28 @@ function updateProgress() {
 }
 
 function destroyHLS() {
-  if (hls) {
+  if (hls && typeof hls.destroy === 'function') {
     hls.destroy();
     hls = null;
   }
 }
 
 function safePlay() {
-  const promise = video.play();
-  if (promise !== undefined) {
-    promise.catch(err => {
-      console.warn('自动播放被浏览器限制，请手动点击播放', err);
+  try {
+    video.muted = false;
+    const promise = video.play();
+    if (promise) promise.catch(err => {
+      console.warn('自动播放被限制，请点击播放');
       showLoading(false);
     });
-  }
+  } catch (e) {}
 }
 
 function changeVideoSource(url) {
   if (!url || url === currentUrl) return;
   destroyHLS();
   video.pause();
-  video.removeAttribute('src');
-  video.load();
+  video.src = '';
   currentUrl = url;
   showLoading(true);
 
@@ -164,42 +167,34 @@ function changeVideoSource(url) {
 
   try {
     if (url.includes('.m3u8')) {
-      if (!Hls || !Hls.isSupported()) {
-        alert('当前浏览器不支持直播播放');
+      if (!window.Hls || !Hls.isSupported()) {
+        alert('浏览器不支持直播');
         showLoading(false);
         return;
       }
-      hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-      });
+      hls = new Hls({ enableWorker: true, lowLatencyMode: true });
       hls.loadSource(url);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.muted = false;
         safePlay();
         showLoading(false);
       });
       hls.on(Hls.Events.ERROR, (evt, data) => {
-        console.error('HLS错误', data);
         if (data.fatal) {
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            hls.startLoad();
-          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            hls.recoverMediaError();
-          } else {
-            alert('直播链接失效或无法播放');
-            showLoading(false);
-            destroyHLS();
-          }
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+          else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+          else { alert('直播失效'); showLoading(false); destroyHLS(); }
         }
       });
     } else {
       video.src = url;
+      video.muted = false;
       safePlay();
       showLoading(false);
     }
   } catch (e) {
-    console.error('播放异常', e);
+    console.error(e);
     alert('播放失败');
     showLoading(false);
   }
@@ -226,9 +221,7 @@ playBtn.addEventListener('click', () => {
   safePlay();
 });
 
-pauseBtn.addEventListener('click', () => {
-  video.pause();
-});
+pauseBtn.addEventListener('click', () => video.pause());
 
 stopBtn.addEventListener('click', () => {
   video.pause();
@@ -239,35 +232,33 @@ stopBtn.addEventListener('click', () => {
 
 fullscreenBtn.addEventListener('click', () => {
   const el = document.querySelector('.xp-wmp-container');
-  const fullEle = document.fullscreenElement || document.webkitFullscreenElement;
-  if (!fullEle) {
-    if (el.requestFullscreen) el.requestFullscreen();
-    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  const fe = document.fullscreenElement || document.webkitFullscreenElement;
+  if (!fe) {
+    if (el.requestFullscreen) {
+      el.requestFullscreen();
+    } else if (el.webkitRequestFullscreen) {
+      el.webkitRequestFullscreen();
+    }
   } else {
-    if (document.exitFullscreen) document.exitFullscreen();
-    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
   }
 });
 
 playlistItems.forEach(item => {
-  item.addEventListener('click', () => {
-    changeVideoSource(item.dataset.url);
-  });
+  item.addEventListener('click', () => changeVideoSource(item.dataset.url));
 });
 
-video.addEventListener('timeupdate', () => {
-  updateProgress();
-  updateTime();
-});
-
+video.addEventListener('timeupdate', () => { updateProgress(); updateTime(); });
 video.addEventListener('loadedmetadata', updateTime);
 video.addEventListener('loadeddata', () => showLoading(false));
 window.addEventListener('beforeunload', destroyHLS);
 
 window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    changeVideoSource(playlistItems[0].dataset.url);
-  }, 500);
+  setTimeout(() => changeVideoSource(playlistItems[0].dataset.url), 300);
 });
 </script>
 </body>
