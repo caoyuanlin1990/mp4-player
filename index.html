@@ -33,14 +33,12 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .volume-wrap span{color:#000;font-size:11px}
 #volume-slider{width:80px;accent-color:#3A85FF;height:10px;-webkit-appearance:none}
 #volume-slider::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;background:#3A85FF;border-radius:2px}
-
 @media (max-width:600px){
   .xp-wmp-container{width:95%}
   .video-section{height:200px}
   .controls-row{flex-wrap:wrap;gap:6px;justify-content:center}
   .volume-wrap{margin-top:6px}
 }
-
 :fullscreen .xp-wmp-container{width:100%!important;height:100%!important;display:flex;flex-direction:column}
 :fullscreen .video-section{flex:1;height:auto!important}
 :-webkit-full-screen .xp-wmp-container{width:100%!important;height:100%!important;display:flex;flex-direction:column}
@@ -59,14 +57,9 @@ video{width:100%;height:100%;display:block;object-fit:contain}
   </div>
   <div class="video-section">
     <video id="videoPlayer" playsinline></video>
-    <div class="loading-tip" id="loadingTip">正在加载...</div>
+    <div class="loading-tip" id="loadingTip">加载播放列表...</div>
   </div>
-  <div class="playlist-section" id="playlistWrap">
-    <div class="playlist-item" data-url="https://channel.wcrmt.cn/nmip-media/channellive/channel105268/playlist.m3u8">旺苍新闻综合</div>
-    <div class="playlist-item" data-url="https://live.shaoxing.com.cn/video/s10001-sxtv2/index.m3u8">绍兴公共</div>
-    <div class="playlist-item" data-url="https://qcfile.qcrmt.com/nmip-media/channellive/channel100933/playlist.m3u8">青川综合</div>
-    <div class="playlist-item" data-url="https://ru.xiaohe1999.dpdns.org/raw/1000092916.mp4">测试视频</div>
-  </div>
+  <div class="playlist-section" id="playlistWrap"></div>
   <div class="controls-section">
     <div class="progress-wrap" id="progressWrap">
       <div class="progress-bar" id="progressBar"></div>
@@ -86,6 +79,7 @@ video{width:100%;height:100%;display:block;object-fit:contain}
     </div>
   </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
 <script>
 const video = document.getElementById('videoPlayer');
@@ -98,12 +92,16 @@ const playBtn = document.getElementById('playBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const stopBtn = document.getElementById('stopBtn');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
-const playlistItems = document.querySelectorAll('.playlist-item');
+const playlistWrap = document.getElementById('playlistWrap');
 
 let hls = null;
 let currentUrl = '';
+let playlistConfig = [];
+let refreshTimer = null;
 
-// 🔥 修复：默认音量100%，不静音
+const PLAYLIST_API = 'https://raw.staticdn.net/caoyuanlin1990/mp4-player/refs/heads/main/playlist.json';
+const REFRESH_INTERVAL = 3 * 60 * 1000;
+
 video.volume = 1.0;
 volumeSlider.value = 1.0;
 video.muted = false;
@@ -111,20 +109,17 @@ video.muted = false;
 function showLoading(flag) {
   loadingTip.classList.toggle('show', !!flag);
 }
-
 function formatTime(seconds) {
   if (isNaN(seconds) || !isFinite(seconds)) return "00:00";
   const m = Math.floor(seconds / 60).toString().padStart(2, '0');
   const s = Math.floor(seconds % 60).toString().padStart(2, '0');
   return m + ":" + s;
 }
-
 function updateTime() {
   const current = formatTime(video.currentTime);
   const total = (video.duration && isFinite(video.duration)) ? formatTime(video.duration) : "直播";
   timeDisplay.textContent = current + " / " + total;
 }
-
 function updateProgress() {
   if (!video.duration || !isFinite(video.duration)) {
     progressBar.style.width = '0%';
@@ -133,14 +128,12 @@ function updateProgress() {
   const p = (video.currentTime / video.duration) * 100;
   progressBar.style.width = p + '%';
 }
-
 function destroyHLS() {
   if (hls && typeof hls.destroy === 'function') {
     hls.destroy();
     hls = null;
   }
 }
-
 function safePlay() {
   try {
     video.muted = false;
@@ -152,6 +145,33 @@ function safePlay() {
   } catch (e) {}
 }
 
+// 🔥 修复：刷新必显示、保留选中、事件必生效
+function renderPlaylist() {
+  if (!playlistConfig || playlistConfig.length === 0) return;
+  playlistWrap.innerHTML = '';
+  playlistConfig.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'playlist-item';
+    div.dataset.url = item.url;
+    div.textContent = item.name;
+    if (item.url === currentUrl) {
+      div.classList.add('active');
+    }
+    playlistWrap.appendChild(div);
+  });
+  bindPlaylistEvents();
+}
+
+// 🔥 修复：统一绑定事件，刷新不丢失
+function bindPlaylistEvents() {
+  document.querySelectorAll('.playlist-item').forEach(el => {
+    el.onclick = () => {
+      changeVideoSource(el.dataset.url);
+    };
+  });
+}
+
+// 🔥 修复：切换源逻辑稳定，不崩溃
 function changeVideoSource(url) {
   if (!url || url === currentUrl) return;
   destroyHLS();
@@ -160,7 +180,7 @@ function changeVideoSource(url) {
   currentUrl = url;
   showLoading(true);
 
-  playlistItems.forEach(item => {
+  document.querySelectorAll('.playlist-item').forEach(item => {
     item.classList.remove('active');
     if (item.dataset.url === url) item.classList.add('active');
   });
@@ -184,7 +204,11 @@ function changeVideoSource(url) {
         if (data.fatal) {
           if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
           else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
-          else { alert('直播失效'); showLoading(false); destroyHLS(); }
+          else {
+            alert('直播源失效');
+            showLoading(false);
+            destroyHLS();
+          }
         }
       });
     } else {
@@ -200,6 +224,32 @@ function changeVideoSource(url) {
   }
 }
 
+// 🔥 修复：加载列表防卡死、刷新必显示
+async function loadPlaylistFromJson() {
+  showLoading(true);
+  try {
+    const res = await fetch(PLAYLIST_API + '?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('加载失败');
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      playlistConfig = data;
+      renderPlaylist();
+      console.log('✅ 列表刷新成功');
+    }
+  } catch (err) {
+    console.error('❌ 列表刷新失败', err);
+  } finally {
+    showLoading(false);
+  }
+}
+
+// 🔥 修复：自动刷新稳定不崩溃
+function startAutoRefresh() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(loadPlaylistFromJson, REFRESH_INTERVAL);
+}
+
+// 进度条
 progressWrap.addEventListener('click', e => {
   if (!video.duration || !isFinite(video.duration)) return;
   const r = progressWrap.getBoundingClientRect();
@@ -207,22 +257,22 @@ progressWrap.addEventListener('click', e => {
   video.currentTime = pos * video.duration;
 });
 
+// 音量
 volumeSlider.addEventListener('input', () => {
   video.volume = volumeSlider.value;
   video.muted = false;
 });
 
+// 播放控制
 playBtn.addEventListener('click', () => {
-  if (!video.src && !hls) {
-    changeVideoSource(playlistItems[0].dataset.url);
+  if ((!video.src && !hls) && playlistConfig.length > 0) {
+    changeVideoSource(playlistConfig[0].url);
     return;
   }
   video.muted = false;
   safePlay();
 });
-
 pauseBtn.addEventListener('click', () => video.pause());
-
 stopBtn.addEventListener('click', () => {
   video.pause();
   video.currentTime = 0;
@@ -230,35 +280,35 @@ stopBtn.addEventListener('click', () => {
   updateTime();
 });
 
+// 全屏
 fullscreenBtn.addEventListener('click', () => {
   const el = document.querySelector('.xp-wmp-container');
   const fe = document.fullscreenElement || document.webkitFullscreenElement;
   if (!fe) {
-    if (el.requestFullscreen) {
-      el.requestFullscreen();
-    } else if (el.webkitRequestFullscreen) {
-      el.webkitRequestFullscreen();
-    }
+    el.requestFullscreen?.() || el.webkitRequestFullscreen?.();
   } else {
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
-    } else if (document.webkitExitFullscreen) {
-      document.webkitExitFullscreen();
-    }
+    document.exitFullscreen?.() || document.webkitExitFullscreen?.();
   }
 });
 
-playlistItems.forEach(item => {
-  item.addEventListener('click', () => changeVideoSource(item.dataset.url));
-});
-
+// 视频事件
 video.addEventListener('timeupdate', () => { updateProgress(); updateTime(); });
 video.addEventListener('loadedmetadata', updateTime);
 video.addEventListener('loadeddata', () => showLoading(false));
-window.addEventListener('beforeunload', destroyHLS);
 
-window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => changeVideoSource(playlistItems[0].dataset.url), 300);
+// 页面关闭清理
+window.addEventListener('beforeunload', () => {
+  destroyHLS();
+  if (refreshTimer) clearInterval(refreshTimer);
+});
+
+// 初始化
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadPlaylistFromJson();
+  if (playlistConfig.length > 0) {
+    changeVideoSource(playlistConfig[0].url);
+  }
+  startAutoRefresh();
 });
 </script>
 </body>
