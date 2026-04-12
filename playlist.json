@@ -13,18 +13,26 @@
   },
   {
     "name": "测试视频",
-    "url": "https://oss.rw.bbmmic2.com/data/20230331/wSIHQxRx/hls/index.m3u8"
+    "url": "https://ru.xiaohe1999.dpdns.org/raw/1000092916.mp4"
   },
   {
     "name": "春晚1983",
     "url": "https://alimov2.a.kwimgs.com/upic/2022/01/31/15/BMjAyMjAxMzExNTU5MTRfNDAzMDAxOTlfNjYyNzMxNjcwMjBfMF8z_b_Beb3bda599f76c60c463c433ca7460153.mp4"
   },
   {
+    "name": "春晚1987",
+    "url": "https://alimov2.a.kwimgs.com/upic/2022/01/31/16/BMjAyMjAxMzExNjAwMDhfNDAzMDAxOTlfNjYyNzMyNjMyMDNfMF8z_b_B570493ed8f7200d4013a66b2d21b2de9.mp4"
+  },
+  {
     "name": "春晚1999",
     "url": "https://alimov2.a.kwimgs.com/upic/2023/01/13/20/BMjAyMzAxMTMyMDA5MjJfNDAzMDAxOTlfOTM0OTkwNDQxNTRfMF8z_b_B0b5e52bc003285ef66ec0cbb2be08556.mp4"
   },
   {
-    "name": "春晚1987",
-    "url": "https://alimov2.a.kwimgs.com/upic/2022/01/31/16/BMjAyMjAxMzExNjAwMDhfNDAzMDAxOTlfNjYyNzMyNjMyMDNfMF8z_b_B570493ed8f7200d4013a66b2d21b2de9.mp4"
+    "name": "春晚2002",
+    "url": "https://alimov2.a.kwimgs.com/upic/2023/01/13/21/BMjAyMzAxMTMyMTE4MzRfNDAzMDAxOTlfOTM1MDY4ODIxNDdfMF8z_b_Ba6271d10b7e6cfae83759033a091f257.mp4"
+  },
+  {
+    "name": "短片圣诞兔兔",
+    "url": "https://oss.rw.bbmmic2.com/data/20230127/JnUEZ6Of/hls/index.m3u8"
   }
 ]
