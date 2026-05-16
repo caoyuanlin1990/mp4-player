@@ -1,214 +1,1109 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>多源在线</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+<title>多源在线播放器</title>
+
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-html,body{height:100%;background:#111}
-body{display:flex;justify-content:center;align-items:center;padding:8px}
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+html,body{
+  width:100%;
+  height:100%;
+  background:#111;
+  overflow:hidden;
+}
+
+body{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:8px;
+}
 
 .player{
-  width:100%;height:100%;max-width:1100px;
-  background:#1a1a1a;border-radius:16px;
-  box-shadow:0 8px 30px rgba(0,0,0,0.3);
-  overflow:hidden;display:flex;flex-direction:column;
+  width:100%;
+  height:100%;
+  max-width:1200px;
+  background:#1a1a1a;
+  border-radius:16px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
   position:relative;
+  box-shadow:0 10px 35px rgba(0,0,0,.35);
 }
 
 .video-box{
-  position:relative;flex:1;min-height:200px;background:#000;
-  cursor:pointer;
+  flex:1;
+  position:relative;
+  background:#000;
 }
-video{width:100%;height:100%;object-fit:contain;background:#000}
-.loading{
-  position:absolute;inset:0;background:rgba(0,0,0,0.8);color:#fff;
-  display:grid;place-items:center;font-size:15px;opacity:0;pointer-events:none;transition:.2s
-}
-.loading.show{opacity:1}
 
-/* 🔥 深色透明毛玻璃播放列表 */
+video{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  background:#000;
+}
+
+.loading{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.7);
+  display:grid;
+  place-items:center;
+  color:#fff;
+  font-size:15px;
+  opacity:0;
+  pointer-events:none;
+  transition:.2s;
+  z-index:5;
+}
+
+.loading.show{
+  opacity:1;
+}
+
 .playlist-float{
   position:absolute;
-  top:12px;right:12px;
+  top:12px;
+  right:12px;
   width:260px;
-  max-height:400px;
-  background:rgba(20, 20, 20, 0.35);
+  max-height:420px;
+  overflow:hidden;
+
+  background:rgba(20,20,20,.35);
+
   backdrop-filter:blur(12px);
   -webkit-backdrop-filter:blur(12px);
-  border:1px solid rgba(255,255,255,0.08);
-  border-radius:12px;
-  box-shadow:0 4px 20px rgba(0,0,0,0.3);
-  overflow:hidden;z-index:10;
-  transition:all 0.3s ease;
+
+  border:1px solid rgba(255,255,255,.08);
+
+  border-radius:14px;
+
+  z-index:10;
+
   opacity:0;
   transform:translateY(-10px);
   pointer-events:none;
+
+  transition:.25s;
 }
+
 .playlist-float.show{
   opacity:1;
   transform:translateY(0);
   pointer-events:auto;
 }
+
 .playlist-float.collapsed .pl-body{
   display:none;
 }
+
 .pl-head{
-  padding:10px 14px;
-  background:rgba(0, 119, 255, 0.35);
-  backdrop-filter:blur(12px);
-  color:#fff;font-size:14px;font-weight:500;
-  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 14px;
+  background:rgba(0,119,255,.35);
+  color:#fff;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
   cursor:pointer;
+  user-select:none;
 }
-.pl-toggle{font-size:12px}
+
 .pl-body{
-  padding:8px;max-height:340px;overflow-y:auto;
+  padding:8px;
+  max-height:360px;
+  overflow-y:auto;
 }
+
 .pl-item{
-  padding:8px 12px;border-radius:8px;font-size:13px;
-  color:#e0e0e0;cursor:pointer;margin-bottom:4px;transition:.15s;
-  background:rgba(255,255,255,0.05);
+  padding:10px 12px;
+  border-radius:10px;
+  margin-bottom:6px;
+  cursor:pointer;
+  font-size:13px;
+  color:#e0e0e0;
+  background:rgba(255,255,255,.05);
+  transition:.15s;
 }
-.pl-item:hover{background:rgba(255,255,255,0.12)}
-.pl-item.active{background:rgba(0, 119, 255, 0.4);color:#fff}
+
+.pl-item:hover,
+.pl-item.focus{
+  background:rgba(255,255,255,.12);
+}
+
+.pl-item.active{
+  background:rgba(0,119,255,.4);
+  color:#fff;
+}
 
 .controls{
-  padding:14px;display:flex;flex-direction:column;gap:10px;
-  background:#1a1a1a;border-top:1px solid #333
+  padding:14px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  background:#1a1a1a;
+  border-top:1px solid #333;
 }
-.progress{width:100%;height:6px;background:#333;border-radius:99px;cursor:pointer;overflow:hidden}
-.progress .bar{height:100%;background:#0077ff;width:0%;transition:width .1s linear}
-.ctrl-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
-.btn{padding:7px 12px;background:#2a2a2a;color:#0090ff;border:none;border-radius:8px;cursor:pointer;font-size:14px;transition:.15s}
-.btn:hover{background:#333}
-.time{font-size:14px;color:#aaa;min-width:110px;text-align:center}
-.volume{display:flex;align-items:center;gap:6px}
-.volume span{font-size:14px;color:#aaa}
-#vol{width:85px;accent-color:#0077ff}
 
-:fullscreen .player{width:100%!important;height:100%!important;border-radius:0;background:#000}
-:-webkit-full-screen .player{width:100%!important;height:100%!important;border-radius:0;background:#000}
+.progress{
+  width:100%;
+  height:6px;
+  border-radius:999px;
+  background:#333;
+  overflow:hidden;
+  cursor:pointer;
+}
+
+.bar{
+  height:100%;
+  width:0%;
+  background:#0077ff;
+}
+
+.ctrl-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.btn-group{
+  display:flex;
+  gap:8px;
+}
+
+.btn{
+  border:none;
+  background:#2a2a2a;
+  color:#0090ff;
+  padding:8px 12px;
+  border-radius:8px;
+  cursor:pointer;
+  transition:.15s;
+}
+
+.btn:hover{
+  background:#333;
+}
+
+.time{
+  color:#aaa;
+  font-size:14px;
+  min-width:120px;
+  text-align:center;
+}
+
+.volume{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.volume span{
+  color:#aaa;
+  font-size:14px;
+}
+
+#vol{
+  width:90px;
+  accent-color:#0077ff;
+}
+
+:fullscreen .player{
+  border-radius:0;
+}
+
+:-webkit-full-screen .player{
+  border-radius:0;
+}
 </style>
 </head>
 
 <body>
+
 <div class="player">
+
   <div class="video-box" id="videoArea">
-    <video id="video" playsinline></video>
-    <div class="loading" id="loading">加载中...</div>
+
+    <video
+      id="video"
+      playsinline
+      webkit-playsinline
+      x5-playsinline
+    ></video>
+
+    <div class="loading" id="loading">
+      加载中...
+    </div>
+
   </div>
 
-  <!-- 深色透明浮动列表 -->
   <div class="playlist-float" id="floatList">
+
     <div class="pl-head" id="plHead">
       <span>播放列表</span>
-      <span class="pl-toggle" id="plToggle">−</span>
+      <span id="plToggle">−</span>
     </div>
+
     <div class="pl-body" id="plBody"></div>
+
   </div>
 
   <div class="controls">
-    <div class="progress" id="progressWrap"><div class="bar" id="progress"></div></div>
-    <div class="ctrl-row">
-      <div><button class="btn" id="play">播放</button><button class="btn" id="pause">暂停</button><button class="btn" id="stop">停止</button></div>
-      <div class="time" id="time">00:00 / 00:00</div>
-      <div class="volume"><span>音量</span><input type="range" id="vol" min="0" max="1" step="0.05" value="1"></div>
-      <button class="btn" id="full">全屏</button>
+
+    <div class="progress" id="progressWrap">
+      <div class="bar" id="progress"></div>
     </div>
+
+    <div class="ctrl-row">
+
+      <div class="btn-group">
+        <button class="btn" id="play">播放</button>
+        <button class="btn" id="pause">暂停</button>
+        <button class="btn" id="stop">停止</button>
+      </div>
+
+      <div class="time" id="time">
+        00:00 / 00:00
+      </div>
+
+      <div class="volume">
+        <span>音量</span>
+        <input type="range" id="vol" min="0" max="1" step="0.05" value="1">
+      </div>
+
+      <button class="btn" id="full">
+        全屏
+      </button>
+
+    </div>
+
   </div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+
 <script>
+
+/* =========================
+   API 多源
+========================= */
+
+const APIS = [
+
+'https://raw.githubusercontent.com/caoyuanlin1990/mp4-player/main/playlist.json',
+
+'https://cdn.jsdelivr.net/gh/caoyuanlin1990/mp4-player@main/playlist.json',
+
+'https://fastly.jsdelivr.net/gh/caoyuanlin1990/mp4-player@main/playlist.json',
+
+'https://ghproxy.net/https://raw.githubusercontent.com/caoyuanlin1990/mp4-player/main/playlist.json'
+
+];
+
+/* =========================
+   DOM
+========================= */
+
 const video = document.getElementById('video');
-const videoArea = document.getElementById('videoArea');
-const loading = document.getElementById('loading');
-const progress = document.getElementById('progress');
-const progressWrap = document.getElementById('progressWrap');
-const vol = document.getElementById('vol');
-const timeTxt = document.getElementById('time');
-const plBody = document.getElementById('plBody');
-const floatList = document.getElementById('floatList');
-const plHead = document.getElementById('plHead');
-const plToggle = document.getElementById('plToggle');
+
+const loading =
+document.getElementById('loading');
+
+const progress =
+document.getElementById('progress');
+
+const progressWrap =
+document.getElementById('progressWrap');
+
+const timeTxt =
+document.getElementById('time');
+
+const vol =
+document.getElementById('vol');
+
+const plBody =
+document.getElementById('plBody');
+
+const floatList =
+document.getElementById('floatList');
+
+const plHead =
+document.getElementById('plHead');
+
+const plToggle =
+document.getElementById('plToggle');
+
+/* =========================
+   状态
+========================= */
 
 let hls = null;
+
 let currentUrl = '';
+
+let playlist = [];
+
 let hideTimer = null;
-const API = 'https://ghproxy.net/https://raw.githubusercontent.com/caoyuanlin1990/mp4-player/main/playlist.json';
+
+let focusIndex = 0;
 
 video.volume = 1;
 
-// 点击显示，自动隐藏
-function showPlaylist() {
-  floatList.classList.add('show');
-  clearTimeout(hideTimer);
-  hideTimer = setTimeout(() => floatList.classList.remove('show'), 3000);
+/* =========================
+   工具
+========================= */
+
+function showLoading(show){
+
+  loading.classList.toggle(
+    'show',
+    !!show
+  );
 }
-videoArea.addEventListener('click', showPlaylist);
-floatList.addEventListener('mouseenter', () => clearTimeout(hideTimer));
-floatList.addEventListener('mouseleave', () => {
-  hideTimer = setTimeout(() => floatList.classList.remove('show'), 1000);
-});
 
-// 收起展开
-plHead.onclick = (e) => {
-  e.stopPropagation();
-  floatList.classList.toggle('collapsed');
-  plToggle.textContent = floatList.classList.contains('collapsed') ? '+' : '−';
-};
+function fmt(t){
 
-function showLoading(f){loading.classList.toggle('show',!!f)}
-function fmt(t){if(isNaN(t))return'00:00';const m=Math.floor(t/60).toString().padStart(2,'0');const s=Math.floor(t%60).toString().padStart(2,'0');return m+':'+s}
-function updateTime(){timeTxt.textContent=`${fmt(video.currentTime)} / ${fmt(video.duration)}`}
-function updateProgress(){if(!video.duration)return;progress.style.width=(video.currentTime/video.duration*100)+'%'}
-function destroyHLS(){try{if(hls)hls.destroy()}catch(e){}hls=null}
-function playVideo(){try{video.muted=false;const p=video.play();if(p)p.catch(()=>{});showPlaylist()}catch(e){}}
+  if(isNaN(t)) return '00:00';
+
+  const m = Math.floor(t / 60)
+    .toString()
+    .padStart(2,'0');
+
+  const s = Math.floor(t % 60)
+    .toString()
+    .padStart(2,'0');
+
+  return `${m}:${s}`;
+}
+
+function updateTime(){
+
+  timeTxt.textContent =
+    `${fmt(video.currentTime)} / ${fmt(video.duration)}`;
+}
+
+function updateProgress(){
+
+  if(!video.duration) return;
+
+  progress.style.width =
+    (video.currentTime / video.duration * 100) + '%';
+}
+
+function destroyHLS(){
+
+  try{
+
+    if(hls){
+      hls.destroy();
+    }
+
+  }catch(e){}
+
+  hls = null;
+}
+
+function playVideo(){
+
+  try{
+
+    video.muted = false;
+
+    const p = video.play();
+
+    if(p){
+      p.catch(()=>{});
+    }
+
+    showPlaylist();
+
+  }catch(e){}
+}
+
+function showPlaylist(){
+
+  floatList.classList.add('show');
+
+  clearTimeout(hideTimer);
+
+  hideTimer = setTimeout(()=>{
+
+    floatList.classList.remove('show');
+
+  },3000);
+}
+
+/* =========================
+   TV 焦点
+========================= */
+
+function setFocus(index){
+
+  const items =
+    document.querySelectorAll('.pl-item');
+
+  items.forEach(el => {
+    el.classList.remove('focus');
+  });
+
+  if(items[index]){
+
+    items[index].classList.add('focus');
+
+    items[index].scrollIntoView({
+      block:'nearest'
+    });
+  }
+
+  focusIndex = index;
+}
+
+/* =========================
+   渲染列表
+========================= */
 
 function renderList(list){
-  if(!list?.length)return;plBody.innerHTML='';
-  list.forEach(item=>{
-    const div=document.createElement('div');div.className='pl-item';
-    div.dataset.url=item.url;div.textContent=item.name;
-    div.onclick=()=>{loadSource(item.url);showPlaylist()};
-    if(item.url===currentUrl)div.classList.add('active');
-    plBody.appendChild(div);
+
+  playlist = list;
+
+  plBody.innerHTML = '';
+
+  const fragment =
+    document.createDocumentFragment();
+
+  list.forEach((item,index)=>{
+
+    const div =
+      document.createElement('div');
+
+    div.className = 'pl-item';
+
+    if(item.url === currentUrl){
+      div.classList.add('active');
+    }
+
+    div.textContent = item.name;
+
+    div.dataset.index = index;
+
+    div.onclick = ()=>{
+
+      loadSource(item.url);
+
+      showPlaylist();
+    };
+
+    fragment.appendChild(div);
+  });
+
+  plBody.appendChild(fragment);
+
+  setFocus(0);
+}
+
+function activateItem(url){
+
+  document.querySelectorAll('.pl-item')
+    .forEach(el=>{
+      el.classList.remove('active');
+    });
+
+  const idx =
+    playlist.findIndex(v=>v.url===url);
+
+  const active =
+    document.querySelector(
+      `.pl-item[data-index="${idx}"]`
+    );
+
+  if(active){
+    active.classList.add('active');
+  }
+}
+
+/* =========================
+   fetch timeout
+========================= */
+
+function fetchTimeout(url, ms = 8000){
+
+  const controller =
+    new AbortController();
+
+  const timer =
+    setTimeout(()=>{
+      controller.abort();
+    },ms);
+
+  return fetch(
+    url + '?t=' + Date.now(),
+    {
+      cache:'no-store',
+      signal:controller.signal
+    }
+  ).finally(()=>{
+    clearTimeout(timer);
   });
 }
 
-function loadSource(url){
-  if(!url||url===currentUrl)return;destroyHLS();video.pause();video.src='';video.load();currentUrl=url;showLoading(true);
-  document.querySelectorAll('.pl-item').forEach(i=>i.classList.remove('active'));
-  document.querySelector(`.pl-item[data-url="${url}"]`)?.classList.add('active');
-  try{
-    if(url.includes('.m3u8')){
-      if(!Hls.isSupported()){alert('不支持直播');showLoading(false);return}
-      hls=new Hls({lowLatencyMode:true});hls.loadSource(url);hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED,()=>{playVideo();showLoading(false)});
-      hls.on(Hls.Events.ERROR,()=>{hls.startLoad()});
-    }else{video.src=url;playVideo();showLoading(false)}
-  }catch(e){alert('播放失败');showLoading(false)}
+/* =========================
+   API fallback
+========================= */
+
+async function fetchWithFallback(){
+
+  let lastError = null;
+
+  for(const url of APIS){
+
+    try{
+
+      console.log('尝试 API =>', url);
+
+      const res =
+        await fetchTimeout(url);
+
+      if(!res.ok){
+
+        console.log(
+          'HTTP 错误 =>',
+          res.status
+        );
+
+        continue;
+      }
+
+      const data =
+        await res.json();
+
+      if(
+        Array.isArray(data) &&
+        data.length &&
+        data[0].url
+      ){
+
+        console.log(
+          'API 成功 =>',
+          url
+        );
+
+        return data;
+      }
+
+      console.log(
+        'JSON 结构错误'
+      );
+
+    }catch(err){
+
+      console.log(
+        'API 失败 =>',
+        url
+      );
+
+      lastError = err;
+    }
+  }
+
+  throw lastError ||
+  new Error('全部 API 不可用');
 }
+
+/* =========================
+   加载视频
+========================= */
+
+function loadSource(url){
+
+  if(!url || url === currentUrl){
+    return;
+  }
+
+  destroyHLS();
+
+  video.pause();
+
+  video.removeAttribute('src');
+
+  video.load();
+
+  currentUrl = url;
+
+  activateItem(url);
+
+  showLoading(true);
+
+  try{
+
+    if(url.includes('.m3u8')){
+
+      if(!Hls.isSupported()){
+
+        alert('设备不支持 HLS');
+
+        showLoading(false);
+
+        return;
+      }
+
+      hls = new Hls({
+
+        lowLatencyMode:true,
+
+        liveSyncDuration:3,
+
+        liveMaxLatencyDuration:10,
+
+        maxBufferLength:30
+
+      });
+
+      hls.loadSource(url);
+
+      hls.attachMedia(video);
+
+      hls.on(
+        Hls.Events.MANIFEST_PARSED,
+        ()=>{
+
+          playVideo();
+
+          showLoading(false);
+        }
+      );
+
+      hls.on(
+        Hls.Events.ERROR,
+        (event,data)=>{
+
+          if(!data.fatal) return;
+
+          switch(data.type){
+
+            case Hls.ErrorTypes.NETWORK_ERROR:
+
+              console.log(
+                '网络错误恢复'
+              );
+
+              hls.startLoad();
+
+              break;
+
+            case Hls.ErrorTypes.MEDIA_ERROR:
+
+              console.log(
+                '媒体错误恢复'
+              );
+
+              hls.recoverMediaError();
+
+              break;
+
+            default:
+
+              console.log(
+                '无法恢复'
+              );
+
+              destroyHLS();
+
+              showLoading(false);
+
+              break;
+          }
+        }
+      );
+
+    }else{
+
+      video.src = url;
+
+      playVideo();
+
+      showLoading(false);
+    }
+
+  }catch(e){
+
+    console.log(e);
+
+    alert('播放失败');
+
+    showLoading(false);
+  }
+}
+
+/* =========================
+   加载播放列表
+========================= */
 
 async function loadPlaylist(){
-  showLoading(true);try{const res=await fetch(API+'?t='+Date.now(),{cache:'no-store'});const data=await res.json();renderList(data);if(data.length)loadSource(data[0].url);}catch(e){}finally{showLoading(false)}
+
+  showLoading(true);
+
+  try{
+
+    const cache =
+      localStorage.getItem(
+        'playlist-cache'
+      );
+
+    if(cache){
+
+      try{
+
+        const cacheData =
+          JSON.parse(cache);
+
+        if(
+          Array.isArray(cacheData) &&
+          cacheData.length &&
+          cacheData[0].url
+        ){
+
+          console.log(
+            '读取本地缓存'
+          );
+
+          renderList(cacheData);
+
+          if(!currentUrl){
+
+            loadSource(
+              cacheData[0].url
+            );
+          }
+        }
+
+      }catch(e){
+
+        localStorage.removeItem(
+          'playlist-cache'
+        );
+      }
+    }
+
+    const data =
+      await fetchWithFallback();
+
+    localStorage.setItem(
+      'playlist-cache',
+      JSON.stringify(data)
+    );
+
+    renderList(data);
+
+    if(
+      data.length &&
+      !currentUrl
+    ){
+
+      loadSource(data[0].url);
+    }
+
+  }catch(err){
+
+    console.log(err);
+
+    const cache =
+      localStorage.getItem(
+        'playlist-cache'
+      );
+
+    if(cache){
+
+      try{
+
+        const cacheData =
+          JSON.parse(cache);
+
+        if(
+          Array.isArray(cacheData) &&
+          cacheData.length
+        ){
+
+          alert(
+            '网络异常，已使用缓存'
+          );
+
+          renderList(cacheData);
+
+          if(!currentUrl){
+
+            loadSource(
+              cacheData[0].url
+            );
+          }
+
+          return;
+        }
+
+      }catch(e){}
+    }
+
+    alert('播放列表加载失败');
+
+  }finally{
+
+    showLoading(false);
+  }
 }
 
-progressWrap.onclick=(e)=>{if(!video.duration)return;const r=progressWrap.getBoundingClientRect();video.currentTime=((e.clientX-r.left)/r.width)*video.duration};
-vol.oninput=()=>{video.volume=vol.value};
-document.getElementById('play').onclick=()=>{if(!currentUrl)loadPlaylist();else playVideo()};
-document.getElementById('pause').onclick=()=>video.pause();
-document.getElementById('stop').onclick=()=>{video.pause();video.currentTime=0;updateProgress()};
-document.getElementById('full').onclick=()=>{
-  const el=document.querySelector('.player');const fe=document.fullscreenElement||document.webkitFullscreenElement;
-  fe?(document.exitFullscreen?.()||document.webkitExitFullscreen?.()):(el.requestFullscreen?.()||el.webkitRequestFullscreen?.());
+/* =========================
+   控制
+========================= */
+
+progressWrap.onclick = e => {
+
+  if(!video.duration) return;
+
+  const rect =
+    progressWrap.getBoundingClientRect();
+
+  const p =
+    (e.clientX - rect.left)
+    / rect.width;
+
+  video.currentTime =
+    p * video.duration;
 };
 
-video.ontimeupdate=()=>{updateProgress();updateTime()};
-video.onloadeddata=()=>showLoading(false);
-window.onload=loadPlaylist;
+vol.oninput = ()=>{
+
+  video.volume = vol.value;
+};
+
+document.getElementById('play')
+.onclick = ()=>{
+
+  if(!currentUrl){
+
+    loadPlaylist();
+
+  }else{
+
+    playVideo();
+  }
+};
+
+document.getElementById('pause')
+.onclick = ()=>{
+
+  video.pause();
+};
+
+document.getElementById('stop')
+.onclick = ()=>{
+
+  video.pause();
+
+  video.currentTime = 0;
+};
+
+document.getElementById('full')
+.onclick = ()=>{
+
+  const player =
+    document.querySelector('.player');
+
+  if(video.webkitEnterFullscreen){
+
+    video.webkitEnterFullscreen();
+
+    return;
+  }
+
+  const fs =
+    document.fullscreenElement ||
+    document.webkitFullscreenElement;
+
+  if(fs){
+
+    document.exitFullscreen?.();
+
+    document.webkitExitFullscreen?.();
+
+  }else{
+
+    player.requestFullscreen?.();
+
+    player.webkitRequestFullscreen?.();
+  }
+};
+
+/* =========================
+   TV 遥控器
+========================= */
+
+document.addEventListener(
+'keydown',
+e=>{
+
+  switch(e.key){
+
+    case 'ArrowUp':
+
+      showPlaylist();
+
+      if(focusIndex > 0){
+
+        focusIndex--;
+
+        setFocus(focusIndex);
+      }
+
+      break;
+
+    case 'ArrowDown':
+
+      showPlaylist();
+
+      if(
+        focusIndex <
+        playlist.length - 1
+      ){
+
+        focusIndex++;
+
+        setFocus(focusIndex);
+      }
+
+      break;
+
+    case 'ArrowLeft':
+
+      video.currentTime =
+        Math.max(
+          0,
+          video.currentTime - 10
+        );
+
+      break;
+
+    case 'ArrowRight':
+
+      video.currentTime =
+        Math.min(
+          video.duration,
+          video.currentTime + 10
+        );
+
+      break;
+
+    case 'Enter':
+
+      if(
+        floatList.classList
+        .contains('show')
+      ){
+
+        const item =
+          playlist[focusIndex];
+
+        if(item){
+
+          loadSource(item.url);
+        }
+
+      }else{
+
+        if(video.paused){
+
+          playVideo();
+
+        }else{
+
+          video.pause();
+        }
+      }
+
+      break;
+  }
+});
+
+/* =========================
+   UI
+========================= */
+
+plHead.onclick = e => {
+
+  e.stopPropagation();
+
+  floatList.classList.toggle(
+    'collapsed'
+  );
+
+  plToggle.textContent =
+    floatList.classList.contains(
+      'collapsed'
+    )
+    ? '+'
+    : '−';
+};
+
+document.getElementById(
+'videoArea'
+).addEventListener(
+'click',
+showPlaylist
+);
+
+floatList.addEventListener(
+'mouseenter',
+()=>{
+
+  clearTimeout(hideTimer);
+});
+
+floatList.addEventListener(
+'mouseleave',
+()=>{
+
+  hideTimer = setTimeout(()=>{
+
+    floatList.classList.remove(
+      'show'
+    );
+
+  },1000);
+});
+
+/* =========================
+   video
+========================= */
+
+video.ontimeupdate = ()=>{
+
+  updateProgress();
+
+  updateTime();
+};
+
+video.onloadeddata = ()=>{
+
+  showLoading(false);
+};
+
+/* =========================
+   start
+========================= */
+
+window.onload = loadPlaylist;
+
 </script>
+
 </body>
 </html>
