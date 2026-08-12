@@ -1,0 +1,2107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05070b">
+<title>V17影院旗舰版播放器 - Master Enterprise (Cloudflare KV)</title>
+<style>
+:root{--bg:#05070b;--panel:rgba(14,18,28,.72);--line:rgba(255,255,255,.09);--text:#f5f7fb;--muted:#8c98aa;--accent:#00d9ff;--accent2:#367dff;--danger:#ff5d73;--ok:#5be1c3}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif}
+body{overflow:hidden;user-select:none}
+button,input,select{font:inherit}
+button{border:0;color:inherit;background:none;cursor:pointer}
+.player{position:relative;width:100%;height:100dvh;display:flex;flex-direction:column;background:#000}
+.video-wrap{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#000}
+.ambient{position:absolute;inset:-18%;width:136%;height:136%;filter:blur(85px) opacity(.42);mix-blend-mode:screen;pointer-events:none;z-index:0}
+video{position:relative;z-index:2;width:100%;height:100%;object-fit:contain;background:#000}
+.brightness{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;z-index:3}
+.scrim{position:absolute;inset:0;z-index:4;pointer-events:none;background:linear-gradient(to bottom,rgba(0,0,0,.45),transparent 25%,transparent 65%,rgba(0,0,0,.62))}
+.topbar{position:absolute;left:18px;right:18px;top:18px;z-index:8;display:flex;gap:10px;align-items:center;pointer-events:none}
+.badge,.top-btn,.status{pointer-events:auto;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border-radius:14px}
+.badge{padding:9px 13px;font-size:11px;letter-spacing:1.4px;color:#b8c7d9}
+.top-actions{margin-left:auto;display:flex;gap:8px}
+.top-btn{width:40px;height:40px;font-size:16px}
+.top-btn:hover,.control:hover,.select:hover{background:rgba(255,255,255,.11)}
+.center-state{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9;min-width:130px;padding:14px 18px;text-align:center;border:1px solid var(--line);border-radius:18px;background:rgba(5,7,11,.7);backdrop-filter:blur(22px);opacity:0;pointer-events:none;transition:.2s}
+.center-state.show{opacity:1}
+.center-state .spin{width:20px;height:20px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--accent);border-radius:50%;margin:0 auto 8px;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hud{position:absolute;left:50%;top:24%;transform:translate(-50%,-50%) translateY(8px);z-index:20;padding:11px 18px;border:1px solid var(--line);border-radius:18px;background:rgba(10,14,22,.75);backdrop-filter:blur(20px);color:#dffbff;opacity:0;transition:.2s;pointer-events:none;white-space:nowrap}
+.hud.show{opacity:1;transform:translate(-50%,-50%) translateY(0)}
+.playlist{position:absolute;right:18px;top:68px;bottom:18px;width:min(380px,calc(100vw - 36px));z-index:12;display:flex;flex-direction:column;background:rgba(12,16,25,.84);border:1px solid var(--line);border-radius:22px;backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);box-shadow:0 30px 80px rgba(0,0,0,.55);transform:translateX(calc(100% + 30px));transition:.35s cubic-bezier(.2,.8,.2,1);overflow:hidden}
+.playlist.open{transform:translateX(0)}
+.list-head{padding:16px;border-bottom:1px solid var(--line)}
+.list-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px}
+.list-title strong{font-size:15px}
+.count{font-size:11px;color:var(--muted)}
+.search{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.045);color:#fff;outline:0}
+.items{overflow:auto;padding:8px}
+.item{padding:13px;border-radius:13px;color:#aeb8c7;font-size:13px;display:flex;gap:10px;align-items:center;transition:.18s;cursor:pointer}
+.item:hover{background:rgba(255,255,255,.06);color:#fff}
+.item.active{background:linear-gradient(90deg,rgba(54,125,255,.2),rgba(0,217,255,.05));color:#eafcff}
+.item .dot{width:7px;height:7px;border-radius:50%;background:#4b5667;flex:none}
+.item.active .dot{background:var(--accent);box-shadow:0 0 12px var(--accent)}
+.item .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.item .star{margin-left:auto;color:#657083;font-size:14px}
+.item.fav .star{color:#ffd45c}
+.controls{position:relative;z-index:10;padding:8px 18px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(to top,#05070b 82%,rgba(5,7,11,.86));border-top:1px solid rgba(255,255,255,.05)}
+.progress-hit{padding:9px 0;cursor:pointer;touch-action:none}
+.progress{height:4px;background:rgba(255,255,255,.14);border-radius:8px;position:relative}
+.buffer{position:absolute;left:0;top:0;height:100%;width:0;background:rgba(255,255,255,.28);border-radius:8px}
+.bar{position:absolute;left:0;top:0;height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:8px}
+.progress-hit:hover .progress{height:7px}
+.main-row{display:flex;align-items:center;gap:7px;min-height:46px}
+.control{height:38px;min-width:38px;padding:0 11px;border:1px solid transparent;border-radius:11px;background:rgba(255,255,255,.045);font-size:12px;transition:.18s}
+.control.primary{background:linear-gradient(135deg,#287cff,#00cfe8)}
+.control.active{background:rgba(0,217,255,.14);border-color:rgba(0,217,255,.35);color:#aef6ff}
+.time{font-variant-numeric:tabular-nums;color:#c0cad7;font-size:12px;white-space:nowrap;margin:0 4px}
+.spacer{flex:1}
+.range{width:86px;accent-color:var(--accent)}
+.select{height:36px;padding:0 10px;border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.045);color:#fff;outline:0;font-size:12px}
+.status{padding:7px 9px;color:var(--accent);font-size:9px;letter-spacing:.8px}
+.settings{position:absolute;right:18px;bottom:78px;z-index:13;width:260px;padding:14px;background:rgba(12,16,25,.9);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(28px);display:none}
+.settings.open{display:block}
+.setting{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px;color:#aeb8c7}
+.setting:last-child{border-bottom:0}
+.toggle{width:42px;height:24px;border-radius:20px;background:#29313e;position:relative}
+.toggle:after{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.toggle.on{background:var(--accent2)}
+.toggle.on:after{transform:translateX(18px)}
+.pwd-mask{position:absolute;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(2,4,8,.72);backdrop-filter:blur(34px)}
+.pwd-mask.show{display:flex}
+.pwd-box{width:min(390px,calc(100vw - 32px));padding:30px;border:1px solid var(--line);border-radius:24px;background:rgba(16,21,31,.8);box-shadow:0 35px 100px rgba(0,0,0,.65);text-align:center}
+.pwd-box h2{font-size:19px;margin-bottom:8px}.pwd-box p{font-size:12px;color:var(--muted);margin-bottom:20px}
+.pwd-input{width:100%;height:46px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.05);color:#fff;text-align:center;outline:0;letter-spacing:4px}
+.pwd-input:focus{border-color:var(--accent)}
+.unlock{width:100%;height:46px;margin-top:12px;border-radius:13px;background:linear-gradient(135deg,#287cff,#00d9ff);font-weight:700}
+.error{height:18px;color:var(--danger);font-size:11px;margin-top:8px;opacity:0}.error.show{opacity:1}
+.toast-error{position:absolute;left:50%;bottom:20%;transform:translateX(-50%);z-index:25;max-width:90%;padding:12px 16px;border-radius:14px;background:rgba(80,10,22,.85);border:1px solid rgba(255,93,115,.3);color:#ffdce2;display:none}
+.toast-error.show{display:block}
+@media(max-width:760px){
+ .topbar{left:10px;right:10px;top:10px}.playlist{right:10px;top:58px;bottom:10px}
+ .controls{padding-left:10px;padding-right:10px}.main-row{gap:5px}
+ .range{width:65px}.status{display:none}.hide-mobile{display:none}
+ .control{min-width:36px;padding:0 8px}
+ .settings{right:10px;bottom:74px}
+}
+@media(max-width:430px){.time{font-size:11px}.quality-label{display:none}.control{font-size:11px}.range{width:55px}}
+
+.v11-menu{position:absolute;right:18px;bottom:78px;z-index:14;width:290px;padding:12px;background:rgba(12,16,25,.94);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(28px);display:none;box-shadow:0 25px 70px rgba(0,0,0,.5)}
+.v11-menu.open{display:block}.menu-title{font-size:12px;color:#fff;padding:7px 8px 10px}.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.menu-btn{padding:11px 9px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.045);font-size:11px;text-align:left}.menu-btn:hover{background:rgba(255,255,255,.1)}
+.next-card{position:absolute;right:18px;bottom:90px;z-index:15;width:310px;padding:14px;border:1px solid var(--line);border-radius:18px;background:rgba(10,14,22,.9);backdrop-filter:blur(25px);display:none}.next-card.show{display:block}.next-card small{color:var(--muted)}.next-name{margin:6px 0 12px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.next-row{display:flex;gap:7px}.next-row button{flex:1;height:36px;border-radius:10px;background:rgba(255,255,255,.07);font-size:12px}.next-row button:first-child{background:linear-gradient(135deg,#287cff,#00d9ff)}
+.history-dot{width:7px;height:7px;border-radius:50%;background:#6b7788;flex:none}
+.theater .controls{background:linear-gradient(to top,#000 82%,rgba(0,0,0,.86))}.theater video{object-fit:contain}
+@media(max-width:760px){.v11-menu,.next-card{right:10px}.v11-menu{bottom:74px}.next-card{bottom:82px;width:min(310px,calc(100vw - 20px))}}
+
+.locked .controls,.locked .topbar{opacity:.12;transition:.25s;pointer-events:none}.locked .controls:hover,.locked .topbar:hover{opacity:1}.video-wrap.cursor-hide{cursor:none}
+.v11-lock{position:absolute;left:18px;top:68px;z-index:16;width:40px;height:40px;border:1px solid var(--line);border-radius:14px;background:var(--panel);backdrop-filter:blur(22px)}.v11-lock.on{color:var(--accent)}
+.resume-card{position:absolute;left:18px;bottom:92px;z-index:16;width:min(330px,calc(100vw - 36px));padding:14px;border:1px solid var(--line);border-radius:18px;background:rgba(10,14,22,.92);backdrop-filter:blur(25px);display:none}.resume-card.show{display:block}.resume-card small{color:var(--muted)}.resume-name{margin:6px 0 10px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.resume-row{display:flex;gap:7px}.resume-row button{flex:1;height:36px;border-radius:10px;background:rgba(255,255,255,.07);font-size:12px}.resume-row button:first-child{background:linear-gradient(135deg,#287cff,#00d9ff)}
+.mini-info{position:absolute;left:50%;bottom:84px;transform:translateX(-50%);z-index:16;padding:8px 12px;border-radius:12px;background:rgba(5,7,11,.7);border:1px solid var(--line);font-size:11px;color:#d8e2ef;opacity:0;pointer-events:none;transition:.2s}.mini-info.show{opacity:1}
+@media(max-width:760px){.v11-lock{left:10px;top:58px}.resume-card{left:10px;bottom:82px}}
+
+.v11-statusbar{position:absolute;left:18px;bottom:88px;z-index:16;display:flex;gap:7px;align-items:center;pointer-events:none}
+.v11-chip{padding:7px 10px;border:1px solid var(--line);border-radius:11px;background:rgba(8,12,18,.72);backdrop-filter:blur(18px);font-size:10px;color:#b9c6d8}
+.v11-chip.ok{color:#aef6ff}.v11-chip.warn{color:#ffd88a}.v11-chip.bad{color:#ffd0d7}
+.v11-retry{display:none;pointer-events:auto;padding:7px 10px;border-radius:11px;background:rgba(255,255,255,.08);border:1px solid var(--line);font-size:10px}
+.v11-retry.show{display:block}
+@media(max-width:760px){.v11-statusbar{left:10px;bottom:78px}.v11-chip{font-size:9px;padding:6px 8px}}
+
+.v11-progress-wrap{position:relative}
+.v11-marker{position:absolute;top:-2px;width:2px;height:8px;background:rgba(255,255,255,.7);border-radius:2px;transform:translateX(-1px);pointer-events:none}
+.v11-remaining{font-variant-numeric:tabular-nums;color:var(--muted);font-size:11px;white-space:nowrap}
+.v11-toast-stack{position:absolute;right:18px;top:68px;z-index:18;display:flex;flex-direction:column;gap:7px;pointer-events:none}
+.v11-toast{padding:9px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(8,12,18,.82);backdrop-filter:blur(18px);font-size:11px;opacity:0;transform:translateY(-6px);transition:.2s}
+.v11-toast.show{opacity:1;transform:none}
+@media(max-width:760px){.v11-toast-stack{right:10px;top:58px}.v11-remaining{display:none}}
+
+.v11-focus-ring:focus-visible{outline:2px solid rgba(174,246,255,.8);outline-offset:2px}
+.v11-live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#79f2b3;box-shadow:0 0 10px rgba(121,242,179,.7);margin-right:5px}
+.v11-stats{position:absolute;left:18px;top:68px;z-index:17;display:none;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(8,12,18,.84);backdrop-filter:blur(18px);font:10px/1.6 ui-monospace,monospace;color:#b9c6d8;pointer-events:none}
+.v11-stats.show{display:block}
+@media(max-width:760px){.v11-stats{left:10px;top:58px;font-size:9px}}
+
+/* V12+ panels */
+.modal{position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(6px)}
+.modal.show{display:flex}
+.modal-card{width:min(420px,92vw);max-height:80vh;overflow:auto;padding:16px;border:1px solid var(--line);border-radius:18px;background:#0b1119}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:14px}
+.v12-settings-card{display:grid;grid-template-columns:1fr auto;gap:8px 12px;padding:12px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025)}
+.v12-settings-card label{font-size:11px;color:var(--muted)}
+.v12-switch{appearance:none;width:38px;height:22px;border-radius:99px;background:#253040;position:relative;cursor:pointer}
+.v12-switch:checked{background:#5be1c3}.v12-switch:before{content:"";position:absolute;width:16px;height:16px;top:3px;left:3px;border-radius:50%;background:#fff;transition:.2s}.v12-switch:checked:before{transform:translateX(16px)}
+.v12-speedbar{display:flex;gap:5px;flex-wrap:wrap}.v12-speedbar button{padding:6px 8px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.04);color:var(--text);font-size:10px}.v12-speedbar button.active{border-color:rgba(91,225,195,.75);background:rgba(91,225,195,.12)}
+.v12-queue{max-height:180px;overflow:auto;display:flex;flex-direction:column;gap:5px}.v12-queue-item{display:flex;justify-content:space-between;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;font-size:10px}
+
+.v13-quality-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.v13-quality-grid button{padding:7px 8px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.04);color:var(--text);font-size:10px}
+.v13-quality-grid button.active{border-color:rgba(91,225,195,.75);background:rgba(91,225,195,.12)}
+.v13-audio-panel{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.v13-audio-panel select{min-width:130px}
+.v13-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid var(--line);border-radius:9px;color:var(--muted);font-size:9px}
+
+.v14-drawer{position:fixed;right:0;top:0;bottom:0;width:min(340px,100vw);z-index:850;border-left:1px solid var(--line);background:rgba(8,12,18,.94);backdrop-filter:blur(24px);transform:translateX(100%);transition:.3s;display:flex;flex-direction:column}
+.v14-drawer.open{transform:translateX(0)}
+.v14-drawer-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+.v14-tabs{display:flex;gap:5px;padding:8px;border-bottom:1px solid var(--line)}
+.v14-tabs button{flex:1;padding:7px 6px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.03);color:var(--muted);font-size:10px}
+.v14-tabs button.active{color:var(--text);border-color:rgba(91,225,195,.7);background:rgba(91,225,195,.1)}
+.v14-pane{display:none;padding:12px;overflow:auto;flex:1}
+.v14-pane.active{display:block}
+.v14-card{padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.025);margin-bottom:8px}
+.v14-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.v14-btn{padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.04);color:var(--text);font-size:11px}
+.v14-btn:hover{background:rgba(255,255,255,.08)}
+.v14-muted{font-size:9px;color:var(--muted)}
+.v14-search{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.035);color:var(--text);outline:none}
+.v14-kbd{padding:2px 5px;border:1px solid var(--line);border-radius:5px;font:9px ui-monospace,monospace;color:var(--muted)}
+
+.v15-command{position:fixed;inset:0;z-index:1000;display:none;align-items:flex-start;justify-content:center;padding-top:10vh;background:rgba(0,0,0,.58);backdrop-filter:blur(8px)}
+.v15-command.show{display:flex}
+.v15-box{width:min(680px,92vw);border:1px solid var(--line);border-radius:18px;background:#0b1119;box-shadow:0 24px 80px rgba(0,0,0,.5);overflow:hidden}
+.v15-input{width:100%;box-sizing:border-box;padding:14px 16px;background:transparent;border:0;border-bottom:1px solid var(--line);outline:0;color:var(--text);font-size:15px}
+.v15-results{max-height:55vh;overflow:auto;padding:7px}
+.v15-result{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border-radius:10px;cursor:pointer}
+.v15-result:hover,.v15-result.active{background:rgba(255,255,255,.07)}
+.v15-result small{color:var(--muted)}
+.v15-help{padding:9px 12px;color:var(--muted);font-size:9px;border-top:1px solid var(--line)}
+
+.v16-admin-mask{position:fixed;inset:0;z-index:1100;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.72);backdrop-filter:blur(12px)}
+.v16-admin-mask.show{display:flex}
+.v16-admin-login{width:min(390px,92vw);padding:26px;border:1px solid var(--line);border-radius:20px;background:#0b1119;box-shadow:0 30px 100px rgba(0,0,0,.6)}
+.v16-admin-login h2{font-size:18px;margin-bottom:7px}.v16-admin-login p{font-size:11px;color:var(--muted);margin-bottom:16px}
+.v16-admin-input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.04);color:#fff;outline:0}
+.v16-admin-btn{padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.05);color:var(--text);font-size:11px;cursor:pointer}
+.v16-admin-btn.primary{background:linear-gradient(135deg,#287cff,#00d9ff);border:0}
+.v16-admin-error{height:17px;color:#ff8c9d;font-size:10px;margin-top:7px;opacity:0}.v16-admin-error.show{opacity:1}
+.v16-admin{position:fixed;inset:0;z-index:1050;display:none;background:#070b11;color:var(--text)}
+.v16-admin.show{display:flex}
+.v16-admin-side{width:230px;border-right:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:7px}
+.v16-admin-side h2{font-size:16px;margin-bottom:10px}.v16-admin-side small{color:var(--muted);font-size:9px;margin-bottom:8px}
+.v16-admin-nav{padding:10px;border:1px solid transparent;border-radius:10px;text-align:left;font-size:11px;color:var(--muted)}
+.v16-admin-nav.active,.v16-admin-nav:hover{background:rgba(255,255,255,.06);border-color:var(--line);color:#fff}
+.v16-admin-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.v16-admin-top{height:58px;padding:0 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.v16-admin-top strong{font-size:13px}.v16-admin-content{padding:16px;overflow:auto;flex:1}
+.v16-admin-page{display:none}.v16-admin-page.active{display:block}
+.v16-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px}
+.v16-metric{padding:13px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.025)}
+.v16-metric b{font-size:20px;display:block}.v16-metric span{font-size:9px;color:var(--muted)}
+.v16-table{width:100%;border-collapse:collapse;font-size:10px}.v16-table th,.v16-table td{padding:9px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left}.v16-table th{color:var(--muted);font-weight:500}
+.v16-toolbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}.v16-toolbar .v16-admin-input{flex:1;min-width:180px}
+.v16-form{display:grid;grid-template-columns:1fr 1fr;gap:9px}.v16-form .full{grid-column:1/-1}.v16-form label{display:block;font-size:9px;color:var(--muted);margin-bottom:4px}.v16-form input,.v16-form select{width:100%;padding:9px;border:1px solid var(--line);border-radius:9px;background:#0c131c;color:#fff}
+.v16-card{padding:13px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.025);margin-bottom:10px}
+.v16-log{font:10px/1.7 ui-monospace,monospace;color:#b9c6d8;white-space:pre-wrap;max-height:300px;overflow:auto}
+.v16-admin-foot{margin-top:auto;padding-top:8px;border-top:1px solid rgba(255,255,255,.05)}
+@media(max-width:800px){.v16-admin-side{width:170px}.v16-metrics{grid-template-columns:1fr 1fr}.v16-form{grid-template-columns:1fr}}
+@media(max-width:600px){.v16-admin-side{width:54px;padding:8px}.v16-admin-side h2,.v16-admin-side small,.v16-admin-nav span,.v16-admin-foot{display:none}.v16-admin-nav{text-align:center;padding:11px 4px}.v16-metrics{grid-template-columns:1fr 1fr}.v16-admin-content{padding:10px}}
+
+/* V17 extras */
+.v17-ab-bar{position:absolute;left:50%;top:12%;transform:translateX(-50%);z-index:19;display:none;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:12px;background:rgba(8,12,18,.85);backdrop-filter:blur(16px)}
+.v17-ab-bar.show{display:flex}
+.v17-ab-bar button{padding:5px 9px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.05);font-size:10px}
+.v17-ab-bar button.active{border-color:var(--ok);color:var(--ok)}
+.v17-seek-preview{position:absolute;bottom:110px;left:50%;transform:translateX(-50%);z-index:21;padding:6px 10px;border-radius:10px;background:rgba(8,12,18,.9);border:1px solid var(--line);font-size:11px;opacity:0;pointer-events:none;transition:.15s}
+.v17-seek-preview.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="player" id="player">
+  <div class="video-wrap" id="videoWrap">
+    <canvas class="ambient" id="ambient"></canvas>
+    <div class="brightness" id="brightness"></div>
+    <video id="video" playsinline preload="metadata"></video>
+    <div class="scrim"></div>
+    <div class="topbar">
+      <div class="badge" id="titleBadge">MASTER V17 · KV</div>
+      <div class="top-actions">
+        <button class="top-btn" id="v16AdminOpen" aria-label="后台管理">⌘</button>
+        <button class="top-btn" id="btnSettings" aria-label="设置">⚙</button>
+        <button class="top-btn" id="btnListTop" aria-label="播放列表">☰</button>
+        <button class="top-btn" id="btnV8Menu" aria-label="影院工具">⋮</button>
+      </div>
+    </div>
+    <button class="v11-lock" id="lockBtn" aria-label="锁定控制栏">🔒</button>
+    <div class="resume-card" id="resumeCard">
+      <small>继续观看</small>
+      <div class="resume-name" id="resumeName"></div>
+      <div class="resume-row">
+        <button id="resumeNow">继续播放</button>
+        <button id="resumeStart">从头播放</button>
+      </div>
+    </div>
+    <div class="mini-info" id="miniInfo"></div>
+    <div class="v11-statusbar">
+      <span class="v11-chip" id="networkState">在线</span>
+      <span class="v11-chip" id="sourceState"><span class="v11-live-dot"></span>待机</span>
+      <button class="v11-retry" id="retryBtn">重新连接</button>
+    </div>
+    <div class="center-state" id="loading"><div class="spin"></div><div id="loadingText">正在连接视频源</div></div>
+    <div class="hud" id="hud"></div>
+    <div class="v11-toast-stack" id="toastStack"></div>
+    <div class="v11-stats" id="stats"></div>
+    <div class="toast-error" id="fault"></div>
+    <div class="v17-ab-bar" id="abBar">
+      <button id="abSetA">A 点</button>
+      <button id="abSetB">B 点</button>
+      <button id="abToggle">A-B 循环</button>
+      <button id="abClear">清除</button>
+    </div>
+    <div class="v17-seek-preview" id="seekPreview"></div>
+    <div class="playlist" id="playlist">
+      <div class="list-head">
+        <div class="list-title"><strong>播放列表</strong><span class="count" id="count">0</span></div>
+        <input class="search" id="search" placeholder="搜索影片…" autocomplete="off">
+      </div>
+      <div class="items" id="items"></div>
+    </div>
+    <div class="settings" id="settings">
+      <div class="setting"><span>自动播放下一集</span><button class="toggle on" id="toggleAuto"></button></div>
+      <div class="setting"><span>循环播放</span><button class="toggle" id="toggleLoop"></button></div>
+      <div class="setting"><span>环境光</span><button class="toggle on" id="toggleAmbient"></button></div>
+      <div class="setting"><span>影院模式</span><button class="toggle" id="toggleTheater"></button></div>
+      <div class="setting"><span>A-B 循环面板</span><button class="toggle" id="toggleAB"></button></div>
+    </div>
+    <div class="v11-menu" id="v8Menu">
+      <div class="menu-title">影院工具</div>
+      <div class="menu-grid">
+        <button class="menu-btn" id="historyBtn">🕘 播放历史</button>
+        <button class="menu-btn" id="favoriteBtn">☆ 收藏本片</button>
+        <button class="menu-btn" id="aspectBtn">▣ 画面比例</button>
+        <button class="menu-btn" id="subtitleBtn">CC 字幕</button>
+        <button class="menu-btn" id="clearHistoryBtn">清空历史</button>
+        <button class="menu-btn" id="v12Open">V12 设置</button>
+        <button class="menu-btn" id="v14Open">控制中心</button>
+        <button class="menu-btn" id="closeMenu">关闭菜单</button>
+      </div>
+    </div>
+    <div class="next-card" id="nextCard">
+      <small>下一集 · <span id="nextCountdown">5</span> 秒后播放</small>
+      <div class="next-name" id="nextName"></div>
+      <div class="next-row">
+        <button id="nextNow">立即播放</button>
+        <button id="nextCancel">取消</button>
+      </div>
+    </div>
+    <div class="pwd-mask" id="pwdMask">
+      <div class="pwd-box">
+        <h2>VIP 身份验证</h2>
+        <p>请输入观看密码后继续播放</p>
+        <input class="pwd-input" id="pwdInput" type="password" autocomplete="off" inputmode="text" placeholder="观看密码">
+        <div class="error" id="error">密码错误，请重试</div>
+        <button class="unlock" id="unlock">确认解锁</button>
+      </div>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="progress-hit" id="progressHit">
+      <div class="progress">
+        <div class="buffer" id="buffer"></div>
+        <div class="bar" id="bar"></div>
+      </div>
+    </div>
+    <div class="main-row">
+      <button class="control primary" id="play">播放</button>
+      <button class="control hide-mobile" id="back">−10</button>
+      <button class="control hide-mobile" id="forward">+10</button>
+      <span class="time" id="time">00:00 / 00:00</span>
+      <span class="v11-remaining" id="remaining">剩余 00:00</span>
+      <div class="spacer"></div>
+      <button class="control" id="mute">音量</button>
+      <input class="range" id="volume" type="range" min="0" max="1" step=".01" value="1" aria-label="音量">
+      <select class="select quality" id="quality" aria-label="清晰度"><option value="-1">自动</option></select>
+      <select class="select" id="rate" aria-label="倍速">
+        <option value=".5">0.5x</option>
+        <option value=".75">0.75x</option>
+        <option value="1" selected>1x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2x</option>
+        <option value="3">3x</option>
+      </select>
+      <button class="control" id="pip">画中画</button>
+      <button class="control" id="full">全屏</button>
+      <button class="control hide-mobile" id="menuBtn">更多</button>
+    </div>
+  </div>
+</div>
+
+<!-- V12 Modal -->
+<div class="modal" id="v12Panel" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-head"><b>V12 播放设置</b><button class="v14-btn" id="v12Close">关闭</button></div>
+    <div class="v12-settings-card">
+      <label>自动播放下一集</label><input class="v12-switch" id="v12AutoNext" type="checkbox">
+      <label>循环当前视频</label><input class="v12-switch" id="v12Loop" type="checkbox">
+      <label>自动恢复网络</label><input class="v12-switch" id="v12AutoRecover" type="checkbox">
+      <label>双击左右快进/快退</label><input class="v12-switch" id="v12DoubleSeek" type="checkbox">
+    </div>
+    <div style="height:10px"></div>
+    <div class="v12-speedbar" id="v12SpeedBar"></div>
+    <div style="height:10px"></div>
+    <div class="v13-audio-panel">
+      <span class="v13-badge">音频轨道</span>
+      <select id="v13AudioTrack"><option value="">默认音轨</option></select>
+    </div>
+    <div style="height:10px"></div>
+    <div class="v13-quality-grid" id="v13QualityGrid"></div>
+    <div style="height:10px"></div>
+    <div class="v12-queue" id="v12Queue"></div>
+  </div>
+</div>
+
+<!-- V14 Drawer -->
+<aside class="v14-drawer" id="v14Drawer" aria-hidden="true">
+  <div class="v14-drawer-head"><b>V14 控制中心</b><button class="v14-btn" id="v14Close">关闭</button></div>
+  <div class="v14-tabs">
+    <button class="active" data-v14tab="history">历史</button>
+    <button data-v14tab="favorites">收藏</button>
+    <button data-v14tab="settings">设置</button>
+    <button data-v14tab="shortcuts">快捷键</button>
+  </div>
+  <section class="v14-pane active" id="v14-history">
+    <input class="v14-search" id="v14HistorySearch" placeholder="搜索观看记录">
+    <div style="height:8px"></div>
+    <div id="v14HistoryList"></div>
+  </section>
+  <section class="v14-pane" id="v14-favorites">
+    <input class="v14-search" id="v14FavoriteSearch" placeholder="搜索收藏">
+    <div style="height:8px"></div>
+    <div id="v14FavoriteList"></div>
+  </section>
+  <section class="v14-pane" id="v14-settings">
+    <div class="v14-card"><div class="v14-row"><span>主题界面</span><span class="v14-muted">保持当前主题</span></div></div>
+    <div class="v14-card"><div class="v14-row"><span>播放器自动恢复</span><input id="v14Recover" class="v12-switch" type="checkbox" checked></div></div>
+    <div class="v14-card"><div class="v14-row"><span>播放完成自动下一集</span><input id="v14Next" class="v12-switch" type="checkbox" checked></div></div>
+    <div class="v14-card"><div class="v14-row"><span>单集循环</span><input id="v14Loop" class="v12-switch" type="checkbox"></div></div>
+    <div class="v14-card"><button class="v14-btn" id="v14ClearHistory">清空播放历史</button></div>
+  </section>
+  <section class="v14-pane" id="v14-shortcuts">
+    <div class="v14-card">
+      <div class="v14-row"><span>播放 / 暂停</span><span class="v14-kbd">Space</span></div>
+      <div class="v14-row"><span>快退 / 快进</span><span class="v14-kbd">← / →</span></div>
+      <div class="v14-row"><span>静音</span><span class="v14-kbd">M</span></div>
+      <div class="v14-row"><span>全屏</span><span class="v14-kbd">F</span></div>
+      <div class="v14-row"><span>画中画</span><span class="v14-kbd">P</span></div>
+      <div class="v14-row"><span>播放信息</span><span class="v14-kbd">D</span></div>
+      <div class="v14-row"><span>命令面板</span><span class="v14-kbd">Ctrl/Cmd+K</span></div>
+      <div class="v14-row"><span>后台管理</span><span class="v14-kbd">Ctrl+Shift+A</span></div>
+      <div class="v14-row"><span>锁定控制栏</span><span class="v14-kbd">L</span></div>
+      <div class="v14-row"><span>A-B 循环</span><span class="v14-kbd">A</span></div>
+    </div>
+  </section>
+</aside>
+
+<!-- V15 Command -->
+<div class="v15-command" id="v15Command" aria-hidden="true">
+  <div class="v15-box">
+    <input class="v15-input" id="v15CommandInput" placeholder="输入命令或搜索视频…  Esc 关闭">
+    <div class="v15-results" id="v15CommandResults"></div>
+    <div class="v15-help">↑↓ 选择 · Enter 执行 · Esc 关闭 · Ctrl/Cmd+K 打开</div>
+  </div>
+</div>
+
+<!-- V16 Admin -->
+<div class="v16-admin-mask" id="v16AdminLogin">
+  <div class="v16-admin-login">
+    <h2>后台管理</h2>
+    <p>管理员登录后可管理播放列表、收藏、历史和播放器配置。</p>
+    <input class="v16-admin-input" id="v16AdminPass" type="password" placeholder="管理员密码" autocomplete="current-password">
+    <div class="v16-admin-error" id="v16AdminError">管理员密码错误</div>
+    <div style="height:10px"></div>
+    <button class="v16-admin-btn primary" id="v16AdminLoginBtn" style="width:100%">进入后台</button>
+  </div>
+</div>
+<div class="v16-admin" id="v16Admin">
+  <aside class="v16-admin-side">
+    <h2>MASTER ADMIN</h2>
+    <small>V17 + Cloudflare KV</small>
+    <button class="v16-admin-nav active" data-admin-page="dashboard">📊 <span>仪表盘</span></button>
+    <button class="v16-admin-nav" data-admin-page="playlist">🎬 <span>播放列表</span></button>
+    <button class="v16-admin-nav" data-admin-page="users">🔐 <span>访问设置</span></button>
+    <button class="v16-admin-nav" data-admin-page="data">💾 <span>数据管理</span></button>
+    <button class="v16-admin-nav" data-admin-page="logs">🧾 <span>运行日志</span></button>
+    <div class="v16-admin-foot"><button class="v16-admin-btn" id="v16AdminLogout">退出后台</button></div>
+  </aside>
+  <main class="v16-admin-main">
+    <header class="v16-admin-top">
+      <strong id="v16AdminTitle">仪表盘</strong>
+      <button class="v16-admin-btn" id="v16AdminClose">返回播放器</button>
+    </header>
+    <div class="v16-admin-content">
+      <section class="v16-admin-page active" id="admin-dashboard">
+        <div class="v16-metrics">
+          <div class="v16-metric"><b id="admCount">0</b><span>播放列表</span></div>
+          <div class="v16-metric"><b id="admFav">0</b><span>收藏</span></div>
+          <div class="v16-metric"><b id="admHistory">0</b><span>播放历史</span></div>
+          <div class="v16-metric"><b id="admStorage">—</b><span>本地存储</span></div>
+        </div>
+        <div class="v16-card"><b>系统状态</b><div id="admStatus" style="margin-top:9px;font-size:10px;color:var(--muted)">检测中…</div></div>
+      </section>
+      <section class="v16-admin-page" id="admin-playlist">
+        <div class="v16-toolbar">
+          <input class="v16-admin-input" id="admSearch" placeholder="搜索名称或播放地址">
+          <button class="v16-admin-btn primary" id="admAdd">新增视频</button>
+          <button class="v16-admin-btn" id="admSave">保存并同步到 KV</button>
+        </div>
+        <div class="v16-card" id="admEditor" style="display:none">
+          <div class="v16-form">
+            <div><label>名称</label><input id="admName"></div>
+            <div><label>类型</label><select id="admType"><option value="mp4">MP4</option><option value="hls">HLS</option></select></div>
+            <div class="full"><label>播放地址</label><input id="admUrl" placeholder="https://..."></div>
+            <div><label>封面地址（可选）</label><input id="admCover"></div>
+            <div><label>排序</label><input id="admOrder" type="number" value="0"></div>
+          </div>
+          <div style="height:10px"></div>
+          <button class="v16-admin-btn primary" id="admApply">应用</button>
+          <button class="v16-admin-btn" id="admCancel">取消</button>
+        </div>
+        <div class="v16-card">
+          <table class="v16-table">
+            <thead><tr><th>名称</th><th>类型</th><th>地址</th><th>操作</th></tr></thead>
+            <tbody id="admRows"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="v16-admin-page" id="admin-users">
+        <div class="v16-card">
+          <b>管理员与访问控制</b>
+          <div style="height:10px"></div>
+          <div class="v16-form">
+            <div><label>当前管理员密码</label><input id="admOldPass" type="password"></div>
+            <div><label>新管理员密码</label><input id="admNewPass" type="password"></div>
+            <div class="full"><button class="v16-admin-btn primary" id="admChangePass">修改管理员密码</button></div>
+          </div>
+          <div class="v14-muted" style="margin-top:9px">已对接 Cloudflare KV 后端。管理员密码优先通过 API 修改并保存在 KV；本地仅作离线回退。请在浏览器控制台执行 <code>localStorage.setItem("v17-api-base","https://ma.xiaohe1999.dpdns.org")</code> 配置 API 地址后刷新。</div>
+        </div>
+      </section>
+      <section class="v16-admin-page" id="admin-data">
+        <div class="v16-card">
+          <b>数据导入 / 导出</b>
+          <div style="height:10px"></div>
+          <button class="v16-admin-btn" id="admExport">导出管理数据</button>
+          <button class="v16-admin-btn" id="admImportBtn">导入 JSON</button>
+          <input id="admImport" type="file" accept=".json,application/json" style="display:none">
+        </div>
+        <div class="v16-card">
+          <b>恢复默认</b>
+          <div style="height:10px"></div>
+          <button class="v16-admin-btn" id="admClearLocal">清除本地管理数据</button>
+        </div>
+      </section>
+      <section class="v16-admin-page" id="admin-logs">
+        <div class="v16-card"><b>运行日志</b><div style="height:8px"></div><div class="v16-log" id="admLogs">暂无日志</div></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+<script>
+class MasterPlayerV17 {
+  constructor() {
+    // ========== Cloudflare KV 后端地址（部署后请修改为你的 Worker 域名）==========
+    this.apiBase = localStorage.getItem("v17-api-base") || "https://ma.xiaohe1999.dpdns.org";
+    this.adminToken = localStorage.getItem("v17-admin-token") || "";
+    // 兼容旧远程源（KV 不可用时的回退）
+    this.apis = [
+      'https://cdn.jsdelivr.net/gh/caoyuanlin1990/mp4-player@main/playlist.json',
+      'https://cdn.statically.io/gh/caoyuanlin1990/mp4-player/main/playlist.json'
+    ];
+    this.password = "yu19941217";
+    this.adminPassword = localStorage.getItem("v16-admin-pass") || "admin123";
+    this.playlist = [];
+    this.currentUrl = "";
+    this.pendingUrl = "";
+    this.hls = null;
+    this.retry = 0;
+    this.maxRetry = 6;
+    this.retryTimer = null;
+    this.lastStableAt = 0;
+    this.autoNext = localStorage.getItem("v11-auto-next") !== "0";
+    this.loop = localStorage.getItem("v11-loop") === "1";
+    this.ambientOn = localStorage.getItem("v11-ambient") !== "0";
+    this.theater = localStorage.getItem("v11-theater") === "1";
+    this.favorites = this.safeArray("v11-favorites");
+    this.history = this.safeArray("v11-history");
+    this.nextTimer = null;
+    this.locked = localStorage.getItem("v11-locked") === "1";
+    this.resumePending = null;
+    this.logs = [];
+    this.ab = { a: null, b: null, active: false };
+    this.v12 = {
+      autoNext: localStorage.getItem("v12-auto-next") !== "0",
+      loop: localStorage.getItem("v12-loop") === "1",
+      autoRecover: localStorage.getItem("v12-auto-recover") !== "0",
+      doubleSeek: localStorage.getItem("v12-double-seek") !== "0"
+    };
+    this.$ = {};
+    this.bind();
+    this.v12Init();
+    this.v13Init();
+    this.v14Init();
+    this.v15Init();
+    this.v16EnsureState();
+    this.v16AdminInit();
+    this.v17Init();
+    this.loadPlaylist();
+  }
+
+  safeArray(key) {
+    try {
+      const v = JSON.parse(localStorage.getItem(key) || "[]");
+      return Array.isArray(v) ? v : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  log(msg) {
+    const line = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    this.logs.unshift(line);
+    if (this.logs.length > 200) this.logs.pop();
+    const el = document.getElementById("admLogs");
+    if (el) el.textContent = this.logs.join("\n") || "暂无日志";
+  }
+
+  bind() {
+    const ids = [
+      "video","videoWrap","ambient","brightness","playlist","items","count","search","settings",
+      "loading","loadingText","hud","fault","pwdMask","pwdInput","unlock","error","play","back",
+      "forward","time","buffer","bar","progressHit","mute","volume","quality","rate","pip","full",
+      "btnSettings","btnListTop","toggleAuto","toggleLoop","toggleAmbient","toggleTheater",
+      "titleBadge","historyBtn","favoriteBtn","aspectBtn","subtitleBtn","clearHistoryBtn",
+      "closeMenu","nextCard","nextCountdown","nextName","nextNow","nextCancel","btnV8Menu",
+      "menuBtn","lockBtn","resumeCard","resumeName","resumeNow","resumeStart","miniInfo",
+      "networkState","sourceState","retryBtn","remaining","toastStack","stats","v8Menu",
+      "abBar","seekPreview","toggleAB"
+    ];
+    ids.forEach(id => this.$[id] = document.getElementById(id));
+
+    const vol = localStorage.getItem("v11-volume") ?? localStorage.getItem("v4-volume") ?? "1";
+    this.$.volume.value = isFinite(+vol) ? vol : "1";
+    this.$.video.volume = Math.max(0, Math.min(1, +this.$.volume.value));
+
+    const rate = localStorage.getItem("v11-rate") ?? localStorage.getItem("v4-rate") ?? "1";
+    this.$.rate.value = isFinite(+rate) ? rate : "1";
+    this.$.video.playbackRate = +this.$.rate.value;
+
+    this.$.toggleAuto.classList.toggle("on", this.autoNext);
+    this.$.toggleLoop.classList.toggle("on", this.loop);
+    this.$.toggleAmbient.classList.toggle("on", this.ambientOn);
+    this.$.toggleTheater.classList.toggle("on", this.theater);
+    this.applyTheater();
+    this.applyLock();
+
+    this.$.play.onclick = () => this.togglePlay();
+    this.$.back.onclick = () => this.seek(-10);
+    this.$.forward.onclick = () => this.seek(10);
+    this.$.mute.onclick = () => this.toggleMute();
+    this.$.volume.oninput = e => this.setVolume(+e.target.value);
+    this.$.rate.onchange = e => {
+      this.$.video.playbackRate = +e.target.value;
+      localStorage.setItem("v11-rate", e.target.value);
+      this.toast("倍速 " + e.target.value + "x");
+    };
+    this.$.quality.onchange = e => this.setQuality(+e.target.value);
+    this.$.pip.onclick = () => this.pip();
+    this.$.full.onclick = () => this.fullscreen();
+    this.$.btnSettings.onclick = () => this.$.settings.classList.toggle("open");
+    this.$.btnListTop.onclick = () => this.$.playlist.classList.toggle("open");
+    this.$.btnV8Menu.onclick = () => this.$.v8Menu.classList.toggle("open");
+    this.$.menuBtn.onclick = () => this.$.v8Menu.classList.toggle("open");
+    this.$.closeMenu.onclick = () => this.$.v8Menu.classList.remove("open");
+    this.$.historyBtn.onclick = () => this.showHistory();
+    this.$.favoriteBtn.onclick = () => this.toggleFavorite();
+    this.$.aspectBtn.onclick = () => this.toggleAspect();
+    this.$.subtitleBtn.onclick = () => this.toggleSubtitle();
+    this.$.clearHistoryBtn.onclick = () => {
+      this.history = [];
+      localStorage.removeItem("v11-history");
+      this.toast("播放历史已清空");
+      this.v14RenderHistory();
+    };
+    this.$.toggleTheater.onclick = () => this.setToggle("theater");
+    this.$.nextNow.onclick = () => this.playNextNow();
+    this.$.nextCancel.onclick = () => this.cancelNext();
+    this.$.lockBtn.onclick = () => this.toggleLock();
+    this.$.resumeNow.onclick = () => this.resumeNow();
+    this.$.resumeStart.onclick = () => this.resumeStart();
+    this.$.toggleAuto.onclick = () => this.setToggle("auto");
+    this.$.toggleLoop.onclick = () => this.setToggle("loop");
+    this.$.toggleAmbient.onclick = () => this.setToggle("ambient");
+    this.$.toggleAB.onclick = () => {
+      this.$.abBar.classList.toggle("show");
+      this.$.toggleAB.classList.toggle("on", this.$.abBar.classList.contains("show"));
+    };
+    this.$.search.oninput = () => this.renderList(this.$.search.value.trim().toLowerCase());
+    this.$.retryBtn.onclick = () => {
+      if (this.currentUrl) {
+        this.$.retryBtn.classList.remove("show");
+        this.loadSource(this.currentUrl);
+      }
+    };
+    this.setNetworkState(navigator.onLine);
+
+    this.$.video.addEventListener("timeupdate", () => {
+      this.updateProgress();
+      this.v17ABCheck();
+    });
+    this.$.video.addEventListener("progress", () => this.updateBuffer());
+    this.$.video.addEventListener("play", () => {
+      this.$.play.textContent = "暂停";
+      this.$.loading.classList.remove("show");
+      this.startAmbient();
+    });
+    this.$.video.addEventListener("pause", () => {
+      this.$.play.textContent = "播放";
+      this.stopAmbient();
+    });
+    this.$.video.addEventListener("waiting", () => {
+      this.loading(true, "缓冲中…");
+      this.setSourceState("缓冲中", "warn");
+    });
+    this.$.video.addEventListener("playing", () => {
+      this.loading(false);
+      this.setSourceState("播放中", "ok");
+    });
+    this.$.video.addEventListener("ended", () => {
+      if (this.v12.loop || localStorage.getItem("v14-loop") === "1" || this.loop) {
+        this.$.video.currentTime = 0;
+        this.$.video.play();
+      } else if (this.v12.autoNext && localStorage.getItem("v14-next") !== "0" && this.autoNext) {
+        this.next();
+      }
+    });
+    this.$.video.addEventListener("canplay", () => { this.lastStableAt = Date.now(); });
+    this.$.video.addEventListener("seeking", () => this.toast("定位中…"));
+    this.$.video.addEventListener("ratechange", () => {
+      this.$.rate.value = String(this.$.video.playbackRate);
+      localStorage.setItem("v11-rate", String(this.$.video.playbackRate));
+    });
+    this.$.video.addEventListener("error", () => this.fault("视频加载失败，请检查视频源或网络连接"));
+
+    this.$.progressHit.addEventListener("pointerdown", e => {
+      this.scrub(e);
+      this.$.progressHit.setPointerCapture?.(e.pointerId);
+    });
+    this.$.progressHit.addEventListener("pointermove", e => {
+      if (e.buttons) this.scrub(e);
+      else this.v17SeekPreview(e);
+    });
+    this.$.progressHit.addEventListener("pointerleave", () => {
+      this.$.seekPreview?.classList.remove("show");
+    });
+
+    document.addEventListener("keydown", e => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        document.getElementById("v16AdminOpen")?.click();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        this.v15Open();
+        return;
+      }
+      this.keys(e);
+    });
+
+    document.querySelectorAll("button,select,input").forEach(el => el.classList.add("v11-focus-ring"));
+
+    let tap = 0;
+    this.$.videoWrap.addEventListener("pointerup", e => {
+      if (e.target.closest("button,.playlist,.settings,.pwd-mask,.controls,.v14-drawer,.modal,.v15-command,.v16-admin")) return;
+      const now = Date.now();
+      if (now - tap < 280 && this.v12.doubleSeek) {
+        const r = this.$.video.getBoundingClientRect();
+        const x = e.clientX - r.left;
+        if (x < r.width * 0.33) this.seek(-10);
+        else if (x > r.width * 0.67) this.seek(10);
+        else this.togglePlay();
+      }
+      tap = now;
+    });
+
+    window.addEventListener("online", () => {
+      this.setNetworkState(true);
+      this.toast("网络已恢复");
+      if (this.v12.autoRecover && this.currentUrl) this.loadSource(this.currentUrl, true);
+    });
+    window.addEventListener("offline", () => {
+      this.setNetworkState(false);
+      this.fault("网络已断开");
+    });
+    document.addEventListener("fullscreenchange", () => this.toast(document.fullscreenElement ? "已进入全屏" : "已退出全屏"));
+    document.addEventListener("visibilitychange", () => { if (document.hidden) this.saveProgress(); });
+    window.addEventListener("pagehide", () => this.saveProgress());
+
+    document.getElementById("unlock").onclick = () => this.verify();
+    document.getElementById("pwdInput").onkeydown = e => { if (e.key === "Enter") this.verify(); };
+  }
+
+  // ---------- Core ----------
+  async loadPlaylist() {
+    // 1. 优先从 Cloudflare KV 后端拉取
+    if (this.apiBase && !this.apiBase.includes("YOUR_SUBDOMAIN")) {
+      try {
+        const c = new AbortController();
+        const t = setTimeout(() => c.abort(), 8000);
+        const r = await fetch(this.apiBase.replace(/\/+$/, "") + "/api/playlist", {
+          cache: "no-store",
+          signal: c.signal
+        });
+        clearTimeout(t);
+        if (r.ok) {
+          const j = await r.json();
+          const list = Array.isArray(j.data) ? j.data : (Array.isArray(j) ? j : []);
+          if (list.length) {
+            this.playlist = list.filter(x => x && x.url);
+            localStorage.setItem("v11-playlist-cache", JSON.stringify(this.playlist));
+            this.renderList();
+            this.log("从 Cloudflare KV 加载成功: " + this.playlist.length + " 项");
+            if (this.playlist[0]) this.intercept(this.playlist[0].url);
+            return;
+          }
+        }
+      } catch (e) {
+        this.log("KV 拉取失败: " + (e.message || e));
+      }
+    }
+
+    // 2. 回退到旧远程源
+    for (const api of this.apis) {
+      try {
+        const c = new AbortController();
+        const t = setTimeout(() => c.abort(), 6500);
+        const r = await fetch(api, { cache: "no-store", signal: c.signal });
+        clearTimeout(t);
+        if (!r.ok) throw new Error();
+        const d = await r.json();
+        if (Array.isArray(d) && d.length) {
+          this.playlist = d.filter(x => x && x.url);
+          localStorage.setItem("v11-playlist-cache", JSON.stringify(this.playlist));
+          this.renderList();
+          this.log("播放列表加载成功(旧源): " + this.playlist.length + " 项");
+          if (this.playlist[0]) this.intercept(this.playlist[0].url);
+          return;
+        }
+      } catch (e) {}
+    }
+
+    // 3. 本地缓存
+    try {
+      const d = JSON.parse(localStorage.getItem("v11-playlist-cache") || "[]");
+      if (d.length) {
+        this.playlist = d;
+        this.renderList();
+        this.intercept(d[0].url);
+        this.log("使用本地缓存播放列表");
+        return;
+      }
+    } catch (e) {}
+
+    // 4. 内置兜底列表
+    this.playlist = [
+      { name: "旺苍新闻综合", url: "https://channel.wcrmt.cn/nmip-media/channellive/channel105268/playlist.m3u8" },
+      { name: "绍兴公共", url: "https://live.shaoxing.com.cn/video/s10001-sxtv2/index.m3u8" },
+      { name: "绍兴影视", url: "https://live.shaoxing.com.cn/video/s10001-sxtv3/index.m3u8" },
+      { name: "青川综合", url: "https://qcfile.qcrmt.com/nmip-media/channellive/channel100933/playlist.m3u8" },
+      { name: "vip影院01", url: "https://ru.xiaohe1999.dpdns.org/raw/game/VID_20260628_041632_966.mp4" },
+      { name: "vip影院02", url: "https://ru.xiaohe1999.dpdns.org/raw/game/VID_20260628_041057_916.mp4" },
+      { name: "vip影院03", url: "https://ru.xiaohe1999.dpdns.org/raw/game/VID_20260628_051918_607.mp4" },
+      { name: "春晚1983", url: "https://alimov2.a.kwimgs.com/upic/2022/01/31/15/BMjAyMjAxMzExNTU5MTRfNDAzMDAxOTlfNjYyNzMxNjcwMjBfMF8z_b_Beb3bda599f76c60c463c433ca7460153.mp4" },
+      { name: "春晚1987", url: "https://alimov2.a.kwimgs.com/upic/2022/01/31/16/BMjAyMjAxMzExNjAwMDhfNDAzMDAxOTlfNjYyNzMyNjMyMDNfMF8z_b_B570493ed8f7200d4013a66b2d21b2de9.mp4" },
+      { name: "春晚1999", url: "https://alimov2.a.kwimgs.com/upic/2023/01/13/20/BMjAyMzAxMTMyMDA5MjJfNDAzMDAxOTlfOTM0OTkwNDQxNTRfMF8z_b_B0b5e52bc003285ef66ec0cbb2be08556.mp4" },
+      { name: "春晚2002", url: "https://alimov2.a.kwimgs.com/upic/2023/01/13/21/BMjAyMzAxMTMyMTE4MzRfNDAzMDAxOTlfOTM1MDY4ODIxNDdfMF8z_b_Ba6271d10b7e6cfae83759033a091f257.mp4" },
+      { name: "广元综合", url: "https://m3u8.channel.dzsm.com/nmip-media/channellive/channel100999/playlist.m3u8" },
+      { name: "广元文化生活", url: "https://m3u8.channel.dzsm.com/nmip-media/channellive/channel101257/playlist.m3u8" },
+      { name: "还珠格格第二部 十一集", url: "https://vip.ffzy-online3.com/20230112/606_ad5d8825/index.m3u8", order: 0 },
+      { name: "还珠格格第二部 十二集", url: "https://vip.ffzy-online3.com/20230112/605_34192b2f/index.m3u8", order: 0 }
+    ];
+    localStorage.setItem("v11-playlist-cache", JSON.stringify(this.playlist));
+    this.renderList();
+    this.log("使用内置兜底播放列表: " + this.playlist.length + " 项");
+    if (this.playlist[0]) this.intercept(this.playlist[0].url);
+  }
+
+  /** 同步当前 playlist 到 Cloudflare KV（需管理员 Token） */
+  async syncPlaylistToKV() {
+    if (!this.apiBase || this.apiBase.includes("YOUR_SUBDOMAIN")) {
+      this.toast("请先配置 apiBase");
+      return false;
+    }
+    if (!this.adminToken) {
+      this.toast("请先登录后台管理");
+      return false;
+    }
+    try {
+      const r = await fetch(this.apiBase.replace(/\/+$/, "") + "/api/admin/playlist", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + this.adminToken
+        },
+        body: JSON.stringify(this.playlist)
+      });
+      const j = await r.json();
+      if (!j.ok) {
+        this.toast("同步失败: " + (j.error || "未知错误"));
+        if (r.status === 401) {
+          this.adminToken = "";
+          localStorage.removeItem("v17-admin-token");
+        }
+        return false;
+      }
+      this.toast("已同步到 Cloudflare KV (" + (j.count || this.playlist.length) + " 项)");
+      this.log("播放列表已同步到 KV，共 " + (j.count || this.playlist.length) + " 项");
+      return true;
+    } catch (e) {
+      this.toast("同步网络错误");
+      this.log("syncPlaylistToKV 错误: " + e.message);
+      return false;
+    }
+  }
+
+  renderList(q = "") {
+    this.$.items.innerHTML = "";
+    let list = this.playlist.filter(x => (x.name || x.title || "未命名").toLowerCase().includes(q));
+    this.$.count.textContent = this.playlist.length;
+    list.forEach(x => {
+      const d = document.createElement("div");
+      d.className = "item" + (x.url === this.currentUrl ? " active" : "");
+      d.innerHTML = '<span class="dot"></span><span class="name"></span><span class="star"></span>';
+      d.querySelector(".name").textContent = x.name || x.title || "未命名";
+      const star = d.querySelector(".star");
+      star.textContent = this.favorites.includes(x.url) ? "★" : "☆";
+      d.classList.toggle("fav", this.favorites.includes(x.url));
+      d.onclick = () => {
+        this.$.playlist.classList.remove("open");
+        this.intercept(x.url);
+      };
+      this.$.items.appendChild(d);
+    });
+  }
+
+  intercept(url) {
+    if (!url) return;
+    if (sessionStorage.getItem("v11-verified") === "1") this.loadSource(url);
+    else {
+      this.pendingUrl = url;
+      this.$.pwdMask.classList.add("show");
+      setTimeout(() => this.$.pwdInput.focus(), 80);
+    }
+  }
+
+  verify() {
+    if (this.$.pwdInput.value === this.password) {
+      sessionStorage.setItem("v11-verified", "1");
+      this.$.pwdMask.classList.remove("show");
+      this.$.error.classList.remove("show");
+      const u = this.pendingUrl;
+      this.pendingUrl = "";
+      if (u) this.loadSource(u);
+    } else {
+      this.$.error.classList.add("show");
+      this.$.pwdInput.select();
+    }
+  }
+
+  async loadSource(url, silent = false) {
+    if (!url) return;
+    this.destroy();
+    this.currentUrl = url;
+    this.retry = 0;
+    this.addHistory(url);
+    this.renderList(this.$.search.value.trim().toLowerCase());
+    this.loading(!silent, "正在连接视频源");
+    this.setSourceState("连接中", "warn");
+    this.$.fault.classList.remove("show");
+    this.$.retryBtn.classList.remove("show");
+    this.log("加载源: " + url.slice(0, 60));
+
+    if (!url.toLowerCase().includes(".m3u8")) {
+      this.$.video.src = url;
+      this.$.video.onloadedmetadata = () => this.ready(url);
+      this.$.video.load();
+      return;
+    }
+    if (Hls.isSupported()) {
+      this.hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+        backBufferLength: 45,
+        maxBufferLength: 60,
+        maxMaxBufferLength: 120,
+        startLevel: -1,
+        capLevelToPlayerSize: true,
+        abrEwmaDefaultEstimate: 3000000,
+        abrBandWidthFactor: 0.85,
+        abrBandWidthUpFactor: 0.7
+      });
+      this.hls.attachMedia(this.$.video);
+      this.hls.loadSource(url);
+      this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        this.populateQuality();
+        this.restoreQuality();
+        this.v13RefreshQuality();
+        this.ready(url);
+      });
+      this.hls.on(Hls.Events.LEVEL_SWITCHED, () => this.toast("清晰度已切换"));
+      this.hls.on(Hls.Events.ERROR, (ev, d) => {
+        if (!d.fatal) return;
+        if (d.type === Hls.ErrorTypes.NETWORK_ERROR && this.retry < this.maxRetry) {
+          this.retry++;
+          this.toast("网络重试 " + this.retry + "/" + this.maxRetry);
+          clearTimeout(this.retryTimer);
+          this.retryTimer = setTimeout(() => this.hls && this.hls.startLoad(-1), Math.min(8000, this.retry * 900));
+        } else if (d.type === Hls.ErrorTypes.MEDIA_ERROR && this.retry < 2) {
+          this.retry++;
+          this.hls.recoverMediaError();
+        } else {
+          this.fault("HLS 播放失败，请更换线路或稍后重试");
+          this.loading(false);
+        }
+      });
+    } else if (this.$.video.canPlayType("application/vnd.apple.mpegurl")) {
+      this.$.video.src = url;
+      this.$.video.onloadedmetadata = () => this.ready(url);
+      this.$.video.load();
+    } else {
+      this.fault("当前浏览器不支持 HLS");
+    }
+  }
+
+  ready(url) {
+    this.loading(false);
+    this.v13RefreshQuality();
+    this.v13RefreshAudio();
+    this.renderMarkers();
+    this.setSourceState("播放中", "ok");
+    this.$.retryBtn.classList.remove("show");
+    this.$.video.controls = false;
+    this.$.video.playbackRate = +(localStorage.getItem("v11-rate") || localStorage.getItem("v4-rate") || "1");
+    this.$.titleBadge.textContent = (this.playlist.find(x => x.url === url)?.name || "MASTER V17");
+    const t = +(localStorage.getItem("v11-progress:" + url) || 0);
+    if (t > 3 && isFinite(this.$.video.duration) && t < this.$.video.duration - 5) {
+      this.resumePending = t;
+      this.$.resumeName.textContent = (this.playlist.find(x => x.url === url)?.name || "当前视频") + " · 已观看 " + this.fmt(t);
+      this.$.resumeCard.classList.add("show");
+      this.$.video.pause();
+    } else {
+      this.resumePending = null;
+      this.$.resumeCard.classList.remove("show");
+      this.startPlayback();
+    }
+  }
+
+  populateQuality() {
+    if (!this.hls) return;
+    const q = this.$.quality;
+    q.innerHTML = '<option value="-1">自动</option>';
+    const seen = new Set();
+    this.hls.levels.map((l, i) => ({ l, i }))
+      .sort((a, b) => (b.l.height || 0) - (a.l.height || 0))
+      .forEach(({ l, i }) => {
+        const label = l.height ? (l.height + "P") : (Math.round((l.bitrate || 0) / 1000) + "K");
+        if (seen.has(label)) return;
+        seen.add(label);
+        const o = document.createElement("option");
+        o.value = i;
+        o.textContent = label;
+        q.appendChild(o);
+      });
+    q.value = "-1";
+  }
+
+  setQuality(i) {
+    if (!this.hls) return;
+    this.hls.currentLevel = i;
+    localStorage.setItem("v11-quality", String(i));
+    this.toast(i < 0 ? "清晰度：自动" : ("清晰度：" + (this.hls.levels[i]?.height ? this.hls.levels[i].height + "P" : "已切换")));
+    this.v13RefreshQuality();
+  }
+
+  restoreQuality() {
+    const q = +(localStorage.getItem("v11-quality") || -1);
+    if (this.hls && q >= 0 && q < this.hls.levels.length) {
+      this.hls.currentLevel = q;
+      this.$.quality.value = String(q);
+    }
+  }
+
+  saveProgress() {
+    if (this.currentUrl && isFinite(this.$.video.currentTime) && this.$.video.currentTime > 0) {
+      try {
+        localStorage.setItem("v11-progress:" + this.currentUrl, String(this.$.video.currentTime));
+      } catch (e) {}
+    }
+  }
+
+  updateProgress() {
+    const v = this.$.video, d = v.duration;
+    if (!isFinite(d) || d <= 0) return;
+    this.$.bar.style.width = (v.currentTime / d * 100) + "%";
+    this.$.time.textContent = this.fmt(v.currentTime) + " / " + this.fmt(d);
+    if (this.$.remaining) this.$.remaining.textContent = "剩余 " + this.fmt(Math.max(0, d - v.currentTime));
+    this.saveProgress();
+    this.updateStats();
+  }
+
+  updateBuffer() {
+    try {
+      const v = this.$.video, d = v.duration;
+      if (v.buffered.length && isFinite(d)) {
+        this.$.buffer.style.width = (v.buffered.end(v.buffered.length - 1) / d * 100) + "%";
+      }
+    } catch (e) {}
+  }
+
+  scrub(e) {
+    const r = this.$.progressHit.getBoundingClientRect();
+    const p = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    if (isFinite(this.$.video.duration)) this.$.video.currentTime = p * this.$.video.duration;
+  }
+
+  togglePlay() {
+    if (this.$.video.paused) {
+      if (sessionStorage.getItem("v11-verified") !== "1") {
+        this.intercept(this.currentUrl || this.playlist[0]?.url);
+        return;
+      }
+      this.$.video.play().catch(() => {});
+    } else {
+      this.$.video.pause();
+    }
+  }
+
+  seek(sec) {
+    if (!isFinite(this.$.video.duration)) return;
+    this.$.video.currentTime = Math.max(0, Math.min(this.$.video.duration, this.$.video.currentTime + sec));
+    this.toast((sec > 0 ? "+" : "") + sec + " 秒");
+  }
+
+  toggleMute() {
+    this.$.video.muted = !this.$.video.muted;
+    this.$.mute.textContent = this.$.video.muted ? "静音" : "音量";
+    this.toast(this.$.video.muted ? "已静音" : "已恢复声音");
+  }
+
+  setVolume(v) {
+    this.$.video.volume = v;
+    this.$.video.muted = v === 0;
+    localStorage.setItem("v11-volume", v);
+    this.$.mute.textContent = v === 0 ? "静音" : "音量";
+  }
+
+  next() {
+    this.saveProgress();
+    if (this.loop || this.v12.loop) {
+      this.$.video.currentTime = 0;
+      this.$.video.play();
+      return;
+    }
+    if (!this.autoNext && !this.v12.autoNext) return;
+    const i = this.playlist.findIndex(x => x.url === this.currentUrl);
+    if (i >= 0 && i < this.playlist.length - 1) this.showNextCard(this.playlist[i + 1]);
+    else this.toast("已播放到列表末尾");
+  }
+
+  showNextCard(item) {
+    clearInterval(this.nextTimer);
+    this.nextItem = item;
+    this.$.nextName.textContent = item.name || item.title || "下一集";
+    this.$.nextCard.classList.add("show");
+    let n = 5;
+    this.$.nextCountdown.textContent = n;
+    this.nextTimer = setInterval(() => {
+      n--;
+      this.$.nextCountdown.textContent = n;
+      if (n <= 0) this.playNextNow();
+    }, 1000);
+  }
+
+  playNextNow() {
+    clearInterval(this.nextTimer);
+    this.$.nextCard.classList.remove("show");
+    if (this.nextItem) this.intercept(this.nextItem.url);
+  }
+
+  cancelNext() {
+    clearInterval(this.nextTimer);
+    this.nextItem = null;
+    this.$.nextCard.classList.remove("show");
+    this.toast("已取消自动播放");
+  }
+
+  addHistory(url) {
+    const item = this.playlist.find(x => x.url === url);
+    if (!item) return;
+    this.history = [{ url, name: item.name || item.title || "未命名", time: Date.now() }, ...this.history.filter(x => x.url !== url)].slice(0, 30);
+    localStorage.setItem("v11-history", JSON.stringify(this.history));
+    this.v14RenderHistory();
+  }
+
+  showHistory() {
+    this.$.v8Menu.classList.remove("open");
+    if (!this.history.length) {
+      this.toast("暂无播放历史");
+      return;
+    }
+    this.$.items.innerHTML = "";
+    this.$.count.textContent = this.history.length;
+    this.history.forEach(x => {
+      const d = document.createElement("div");
+      d.className = "item" + (x.url === this.currentUrl ? " active" : "");
+      d.innerHTML = '<span class="history-dot"></span><span class="name"></span>';
+      d.querySelector(".name").textContent = x.name;
+      d.onclick = () => this.intercept(x.url);
+      this.$.items.appendChild(d);
+    });
+    this.$.playlist.classList.add("open");
+    this.toast("已显示最近观看");
+  }
+
+  toggleFavorite() {
+    const u = this.currentUrl;
+    if (!u) return;
+    const i = this.favorites.indexOf(u);
+    if (i >= 0) {
+      this.favorites.splice(i, 1);
+      this.toast("已取消收藏");
+    } else {
+      this.favorites.unshift(u);
+      this.toast("已收藏本片");
+    }
+    localStorage.setItem("v11-favorites", JSON.stringify(this.favorites));
+    this.renderList(this.$.search.value.trim().toLowerCase());
+    this.v14RenderFavorites();
+  }
+
+  toggleAspect() {
+    const v = this.$.video;
+    v.style.objectFit = v.style.objectFit === "cover" ? "contain" : "cover";
+    this.toast(v.style.objectFit === "cover" ? "画面：铺满" : "画面：原比例");
+  }
+
+  toggleSubtitle() {
+    if (this.$.video.textTracks && this.$.video.textTracks.length) {
+      const t = this.$.video.textTracks[0];
+      const on = t.mode === "showing";
+      t.mode = on ? "hidden" : "showing";
+      this.toast(on ? "字幕已关闭" : "字幕已开启");
+    } else {
+      this.toast("当前视频没有内置字幕");
+    }
+  }
+
+  startPlayback() {
+    this.$.resumeCard.classList.remove("show");
+    this.$.video.play().catch(() => {
+      this.$.video.muted = true;
+      this.$.video.play().catch(() => {});
+      this.toast("浏览器阻止有声自动播放，已静音启动");
+    });
+  }
+
+  resumeNow() {
+    if (this.resumePending != null) {
+      this.$.video.currentTime = this.resumePending;
+      this.resumePending = null;
+    }
+    this.startPlayback();
+  }
+
+  resumeStart() {
+    this.resumePending = null;
+    this.$.video.currentTime = 0;
+    localStorage.removeItem("v11-progress:" + this.currentUrl);
+    this.startPlayback();
+  }
+
+  toggleLock() {
+    this.locked = !this.locked;
+    localStorage.setItem("v11-locked", this.locked ? "1" : "0");
+    this.applyLock();
+    this.toast(this.locked ? "控制栏已锁定" : "控制栏已解锁");
+  }
+
+  applyLock() {
+    document.getElementById("player").classList.toggle("locked", this.locked);
+    if (this.$.lockBtn) {
+      this.$.lockBtn.classList.toggle("on", this.locked);
+      this.$.lockBtn.textContent = this.locked ? "🔓" : "🔒";
+    }
+  }
+
+  showInfo(text) {
+    if (!this.$.miniInfo) return;
+    this.$.miniInfo.textContent = text;
+    this.$.miniInfo.classList.add("show");
+    clearTimeout(this._infoTimer);
+    this._infoTimer = setTimeout(() => this.$.miniInfo.classList.remove("show"), 900);
+  }
+
+  applyTheater() {
+    document.body.classList.toggle("theater", this.theater);
+  }
+
+  setToggle(which) {
+    if (which === "auto") {
+      this.autoNext = !this.autoNext;
+      localStorage.setItem("v11-auto-next", this.autoNext ? "1" : "0");
+      this.$.toggleAuto.classList.toggle("on", this.autoNext);
+    }
+    if (which === "loop") {
+      this.loop = !this.loop;
+      localStorage.setItem("v11-loop", this.loop ? "1" : "0");
+      this.$.toggleLoop.classList.toggle("on", this.loop);
+    }
+    if (which === "ambient") {
+      this.ambientOn = !this.ambientOn;
+      localStorage.setItem("v11-ambient", this.ambientOn ? "1" : "0");
+      this.$.toggleAmbient.classList.toggle("on", this.ambientOn);
+      this.$.ambient.style.display = this.ambientOn ? "block" : "none";
+    }
+    if (which === "theater") {
+      this.theater = !this.theater;
+      localStorage.setItem("v11-theater", this.theater ? "1" : "0");
+      this.$.toggleTheater.classList.toggle("on", this.theater);
+      this.applyTheater();
+      this.toast(this.theater ? "影院模式已开启" : "影院模式已关闭");
+    }
+  }
+
+  async pip() {
+    try {
+      if (document.pictureInPictureElement) await document.exitPictureInPicture();
+      else if (document.pictureInPictureEnabled) await this.$.video.requestPictureInPicture();
+      else this.toast("当前浏览器不支持画中画");
+    } catch (e) {
+      this.toast("画中画不可用");
+    }
+  }
+
+  async fullscreen() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await this.$.videoWrap.requestFullscreen?.();
+    } catch (e) {
+      this.toast("全屏不可用");
+    }
+  }
+
+  keys(e) {
+    if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+    if (this.locked && e.key.toLowerCase() !== "l" && e.key !== "Escape") return;
+    const k = e.key.toLowerCase();
+    if (k === " ") { e.preventDefault(); this.togglePlay(); }
+    else if (k === "m") this.toggleMute();
+    else if (k === "f") this.fullscreen();
+    else if (k === "p") this.pip();
+    else if (k === "l") this.toggleLock();
+    else if (k === "a") {
+      this.$.abBar.classList.toggle("show");
+      this.$.toggleAB?.classList.toggle("on", this.$.abBar.classList.contains("show"));
+    }
+    else if (k === "arrowleft") this.seek(-10);
+    else if (k === "arrowright") this.seek(10);
+    else if (k === "arrowup") {
+      this.setVolume(Math.min(1, this.$.video.volume + 0.05));
+      this.showInfo("音量 " + Math.round(this.$.video.volume * 100) + "%");
+    } else if (k === "arrowdown") {
+      this.setVolume(Math.max(0, this.$.video.volume - 0.05));
+      this.showInfo("音量 " + Math.round(this.$.video.volume * 100) + "%");
+    } else if (k === "," || k === "<") {
+      this.$.video.playbackRate = Math.max(0.5, this.$.video.playbackRate - 0.25);
+      this.$.rate.value = String(this.$.video.playbackRate);
+      this.showInfo("倍速 " + this.$.video.playbackRate + "x");
+    } else if (k === "." || k === ">") {
+      this.$.video.playbackRate = Math.min(3, this.$.video.playbackRate + 0.25);
+      this.$.rate.value = String(this.$.video.playbackRate);
+      this.showInfo("倍速 " + this.$.video.playbackRate + "x");
+    } else if (/^[0-9]$/.test(k)) {
+      const n = Number(k);
+      if (isFinite(this.$.video.duration)) this.$.video.currentTime = this.$.video.duration * (n / 10);
+      this.showInfo(n * 10 + "%");
+    } else if (k === "d") {
+      this.toggleStats();
+      this.showInfo(this.$.stats.classList.contains("show") ? "播放信息已开启" : "播放信息已关闭");
+    } else if (k === "?") {
+      this.toast("Space播放 · ←→快进 · M静音 · F全屏 · P画中画 · D信息 · L锁定 · A A-B循环 · Ctrl+K命令");
+    } else if (k === "home") {
+      this.$.video.currentTime = 0;
+      this.showInfo("回到开头");
+    } else if (k === "end") {
+      if (isFinite(this.$.video.duration)) this.$.video.currentTime = Math.max(0, this.$.video.duration - 2);
+      this.showInfo("跳到结尾");
+    } else if (k === "escape") {
+      this.$.v8Menu.classList.remove("open");
+      this.$.settings.classList.remove("open");
+      this.cancelNext();
+      this.$.resumeCard.classList.remove("show");
+      document.getElementById("v12Panel")?.classList.remove("show");
+      document.getElementById("v14Drawer")?.classList.remove("open");
+      document.getElementById("v15Command")?.classList.remove("show");
+    } else if (k === "o") {
+      document.getElementById("v12Panel")?.classList.add("show");
+    } else if (k === "c") {
+      document.getElementById("v14Drawer")?.classList.add("open");
+      this.v14RenderHistory();
+      this.v14RenderFavorites();
+    }
+  }
+
+  loading(on, text) {
+    this.$.loadingText.textContent = text || "加载中";
+    this.$.loading.classList.toggle("show", on);
+  }
+
+  fault(text) {
+    this.loading(false);
+    this.setSourceState("播放异常", "bad");
+    this.$.retryBtn.classList.add("show");
+    this.$.fault.textContent = text;
+    this.$.fault.classList.add("show");
+    setTimeout(() => this.$.fault.classList.remove("show"), 5000);
+    this.log("错误: " + text);
+  }
+
+  toast(text) {
+    this.$.hud.textContent = text;
+    this.$.hud.classList.add("show");
+    clearTimeout(this._toast);
+    this._toast = setTimeout(() => this.$.hud.classList.remove("show"), 1300);
+  }
+
+  toastV11(text) {
+    this.toast(text);
+  }
+
+  fmt(t) {
+    t = Math.max(0, Math.floor(t || 0));
+    const h = Math.floor(t / 3600);
+    const m = Math.floor((t % 3600) / 60);
+    const s = t % 60;
+    if (h > 0) return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+    return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+  }
+
+  startAmbient() {
+    if (!this.ambientOn) return;
+    cancelAnimationFrame(this.af);
+    const c = this.$.ambient, x = c.getContext("2d");
+    c.width = 48;
+    c.height = 27;
+    const draw = () => {
+      if (!this.ambientOn || this.$.video.paused) return;
+      try { x.drawImage(this.$.video, 0, 0, 48, 27); } catch (e) {}
+      this.af = requestAnimationFrame(draw);
+    };
+    draw();
+  }
+
+  stopAmbient() {
+    cancelAnimationFrame(this.af);
+  }
+
+  destroy() {
+    this.stopAmbient();
+    clearTimeout(this.retryTimer);
+    clearInterval(this.nextTimer);
+    this.$.nextCard.classList.remove("show");
+    this.$.resumeCard?.classList.remove("show");
+    this.resumePending = null;
+    this.retryTimer = null;
+    if (this.hls) {
+      try { this.hls.destroy(); } catch (e) {}
+      this.hls = null;
+    }
+    this.$.video.onloadedmetadata = null;
+    this.$.video.removeAttribute("src");
+    this.$.video.load();
+  }
+
+  setNetworkState(online) {
+    if (!this.$.networkState) return;
+    this.$.networkState.textContent = online ? "在线" : "离线";
+    this.$.networkState.className = "v11-chip " + (online ? "ok" : "bad");
+  }
+
+  setSourceState(text, type) {
+    if (!this.$.sourceState) return;
+    this.$.sourceState.innerHTML = '<span class="v11-live-dot"></span>' + text;
+    this.$.sourceState.className = "v11-chip " + (type || "");
+  }
+
+  toggleStats() {
+    this.$.stats.classList.toggle("show");
+  }
+
+  updateStats() {
+    if (!this.$.stats || !this.$.stats.classList.contains("show")) return;
+    const v = this.$.video;
+    const q = this.hls ? (this.hls.levels[this.hls.currentLevel]?.height || "自动") : "—";
+    this.$.stats.innerHTML =
+      `时间 ${this.fmt(v.currentTime)} / ${this.fmt(v.duration)}<br>` +
+      `缓冲 ${v.buffered.length ? this.fmt(v.buffered.end(v.buffered.length - 1)) : "—"}<br>` +
+      `倍速 ${v.playbackRate}x · 音量 ${Math.round(v.volume * 100)}%<br>` +
+      `清晰度 ${q}P · 重试 ${this.retry}`;
+  }
+
+  renderMarkers() {
+    // Placeholder for future chapter markers
+  }
+
+  // ---------- V12 ----------
+  v12Init() {
+    const panel = document.getElementById("v12Panel");
+    document.getElementById("v12Open")?.addEventListener("click", () => {
+      this.$.v8Menu.classList.remove("open");
+      panel.classList.add("show");
+      this.v12SyncUI();
+    });
+    document.getElementById("v12Close")?.addEventListener("click", () => panel.classList.remove("show"));
+
+    const auto = document.getElementById("v12AutoNext");
+    const loop = document.getElementById("v12Loop");
+    const recover = document.getElementById("v12AutoRecover");
+    const dseek = document.getElementById("v12DoubleSeek");
+    if (auto) auto.checked = this.v12.autoNext;
+    if (loop) loop.checked = this.v12.loop;
+    if (recover) recover.checked = this.v12.autoRecover;
+    if (dseek) dseek.checked = this.v12.doubleSeek;
+
+    auto?.addEventListener("change", () => {
+      this.v12.autoNext = auto.checked;
+      localStorage.setItem("v12-auto-next", auto.checked ? "1" : "0");
+    });
+    loop?.addEventListener("change", () => {
+      this.v12.loop = loop.checked;
+      localStorage.setItem("v12-loop", loop.checked ? "1" : "0");
+    });
+    recover?.addEventListener("change", () => {
+      this.v12.autoRecover = recover.checked;
+      localStorage.setItem("v12-auto-recover", recover.checked ? "1" : "0");
+    });
+    dseek?.addEventListener("change", () => {
+      this.v12.doubleSeek = dseek.checked;
+      localStorage.setItem("v12-double-seek", dseek.checked ? "1" : "0");
+    });
+
+    const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
+    const bar = document.getElementById("v12SpeedBar");
+    if (bar) {
+      bar.innerHTML = "";
+      speeds.forEach(s => {
+        const b = document.createElement("button");
+        b.textContent = s + "x";
+        if (s === this.$.video.playbackRate) b.classList.add("active");
+        b.onclick = () => {
+          this.$.video.playbackRate = s;
+          this.$.rate.value = String(s);
+          localStorage.setItem("v11-rate", String(s));
+          bar.querySelectorAll("button").forEach(x => x.classList.remove("active"));
+          b.classList.add("active");
+          this.toast("倍速 " + s + "x");
+        };
+        bar.appendChild(b);
+      });
+    }
+  }
+
+  v12SyncUI() {
+    const auto = document.getElementById("v12AutoNext");
+    const loop = document.getElementById("v12Loop");
+    if (auto) auto.checked = this.v12.autoNext;
+    if (loop) loop.checked = this.v12.loop;
+  }
+
+  // ---------- V13 ----------
+  v13Init() {
+    // Quality & audio panels live in V12 modal
+  }
+
+  v13RefreshQuality() {
+    const grid = document.getElementById("v13QualityGrid");
+    if (!grid) return;
+    grid.innerHTML = "";
+    if (!this.hls || !this.hls.levels.length) {
+      grid.innerHTML = '<span class="v14-muted">无多清晰度</span>';
+      return;
+    }
+    const auto = document.createElement("button");
+    auto.textContent = "自动";
+    if (this.hls.currentLevel < 0) auto.classList.add("active");
+    auto.onclick = () => this.setQuality(-1);
+    grid.appendChild(auto);
+    this.hls.levels.forEach((l, i) => {
+      const b = document.createElement("button");
+      b.textContent = l.height ? l.height + "P" : Math.round(l.bitrate / 1000) + "K";
+      if (this.hls.currentLevel === i) b.classList.add("active");
+      b.onclick = () => this.setQuality(i);
+      grid.appendChild(b);
+    });
+  }
+
+  v13RefreshAudio() {
+    const sel = document.getElementById("v13AudioTrack");
+    if (!sel) return;
+    sel.innerHTML = '<option value="">默认音轨</option>';
+    if (this.hls && this.hls.audioTracks && this.hls.audioTracks.length) {
+      this.hls.audioTracks.forEach((t, i) => {
+        const o = document.createElement("option");
+        o.value = i;
+        o.textContent = t.name || t.lang || ("音轨 " + (i + 1));
+        sel.appendChild(o);
+      });
+      sel.onchange = () => {
+        const i = +sel.value;
+        if (isFinite(i) && this.hls) this.hls.audioTrack = i;
+      };
+    }
+  }
+
+  // ---------- V14 ----------
+  v14Init() {
+    document.getElementById("v14Open")?.addEventListener("click", () => {
+      this.$.v8Menu.classList.remove("open");
+      document.getElementById("v14Drawer").classList.add("open");
+      this.v14RenderHistory();
+      this.v14RenderFavorites();
+    });
+    document.getElementById("v14Close")?.addEventListener("click", () => {
+      document.getElementById("v14Drawer").classList.remove("open");
+    });
+
+    document.querySelectorAll("[data-v14tab]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-v14tab]").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".v14-pane").forEach(p => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("v14-" + btn.dataset.v14tab)?.classList.add("active");
+      });
+    });
+
+    document.getElementById("v14HistorySearch")?.addEventListener("input", e => this.v14RenderHistory(e.target.value));
+    document.getElementById("v14FavoriteSearch")?.addEventListener("input", e => this.v14RenderFavorites(e.target.value));
+
+    const recover = document.getElementById("v14Recover");
+    const next = document.getElementById("v14Next");
+    const loop = document.getElementById("v14Loop");
+    if (recover) recover.checked = this.v12.autoRecover;
+    if (next) next.checked = this.autoNext;
+    if (loop) loop.checked = this.loop;
+
+    recover?.addEventListener("change", () => {
+      this.v12.autoRecover = recover.checked;
+      localStorage.setItem("v12-auto-recover", recover.checked ? "1" : "0");
+    });
+    next?.addEventListener("change", () => {
+      this.autoNext = next.checked;
+      localStorage.setItem("v11-auto-next", next.checked ? "1" : "0");
+      localStorage.setItem("v14-next", next.checked ? "1" : "0");
+      this.$.toggleAuto.classList.toggle("on", this.autoNext);
+    });
+    loop?.addEventListener("change", () => {
+      this.loop = loop.checked;
+      localStorage.setItem("v11-loop", loop.checked ? "1" : "0");
+      localStorage.setItem("v14-loop", loop.checked ? "1" : "0");
+      this.$.toggleLoop.classList.toggle("on", this.loop);
+    });
+
+    document.getElementById("v14ClearHistory")?.addEventListener("click", () => {
+      this.history = [];
+      localStorage.removeItem("v11-history");
+      this.v14RenderHistory();
+      this.toast("播放历史已清空");
+    });
+  }
+
+  v14RenderHistory(q = "") {
+    const box = document.getElementById("v14HistoryList");
+    if (!box) return;
+    const list = this.history.filter(x => !q || (x.name || "").toLowerCase().includes(q.toLowerCase()));
+    if (!list.length) {
+      box.innerHTML = '<div class="v14-muted" style="padding:12px;text-align:center">暂无记录</div>';
+      return;
+    }
+    box.innerHTML = list.map(x => `
+      <div class="v14-card" style="cursor:pointer">
+        <div class="v14-row"><span>${x.name}</span><span class="v14-muted">${new Date(x.time).toLocaleDateString()}</span></div>
+      </div>`).join("");
+    box.querySelectorAll(".v14-card").forEach((el, i) => {
+      el.onclick = () => {
+        this.intercept(list[i].url);
+        document.getElementById("v14Drawer").classList.remove("open");
+      };
+    });
+  }
+
+  v14RenderFavorites(q = "") {
+    const box = document.getElementById("v14FavoriteList");
+    if (!box) return;
+    const items = this.favorites.map(url => {
+      const p = this.playlist.find(x => x.url === url);
+      return { url, name: p?.name || p?.title || url.slice(0, 40) };
+    }).filter(x => !q || x.name.toLowerCase().includes(q.toLowerCase()));
+    if (!items.length) {
+      box.innerHTML = '<div class="v14-muted" style="padding:12px;text-align:center">暂无收藏</div>';
+      return;
+    }
+    box.innerHTML = items.map(x => `
+      <div class="v14-card" style="cursor:pointer">
+        <div class="v14-row"><span>${x.name}</span><span class="v14-muted">★</span></div>
+      </div>`).join("");
+    box.querySelectorAll(".v14-card").forEach((el, i) => {
+      el.onclick = () => {
+        this.intercept(items[i].url);
+        document.getElementById("v14Drawer").classList.remove("open");
+      };
+    });
+  }
+
+  // ---------- V15 ----------
+  v15Init() {
+    const cmd = document.getElementById("v15Command");
+    const input = document.getElementById("v15CommandInput");
+    const results = document.getElementById("v15CommandResults");
+    this._v15Index = 0;
+    this._v15Items = [];
+
+    input?.addEventListener("input", () => this.v15Search(input.value));
+    input?.addEventListener("keydown", e => {
+      if (e.key === "Escape") {
+        cmd.classList.remove("show");
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        this._v15Index = Math.min(this._v15Index + 1, this._v15Items.length - 1);
+        this.v15Highlight();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        this._v15Index = Math.max(this._v15Index - 1, 0);
+        this.v15Highlight();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        this._v15Items[this._v15Index]?.run();
+        cmd.classList.remove("show");
+      }
+    });
+  }
+
+  v15Open() {
+    const cmd = document.getElementById("v15Command");
+    const input = document.getElementById("v15CommandInput");
+    cmd.classList.add("show");
+    input.value = "";
+    this.v15Search("");
+    setTimeout(() => input.focus(), 50);
+  }
+
+  v15Search(q) {
+    const results = document.getElementById("v15CommandResults");
+    q = (q || "").trim().toLowerCase();
+    const cmds = [
+      { label: "播放 / 暂停", desc: "Space", run: () => this.togglePlay() },
+      { label: "全屏", desc: "F", run: () => this.fullscreen() },
+      { label: "画中画", desc: "P", run: () => this.pip() },
+      { label: "静音切换", desc: "M", run: () => this.toggleMute() },
+      { label: "锁定控制栏", desc: "L", run: () => this.toggleLock() },
+      { label: "打开播放列表", desc: "", run: () => this.$.playlist.classList.add("open") },
+      { label: "打开设置", desc: "O", run: () => document.getElementById("v12Panel").classList.add("show") },
+      { label: "控制中心", desc: "C", run: () => { document.getElementById("v14Drawer").classList.add("open"); this.v14RenderHistory(); this.v14RenderFavorites(); } },
+      { label: "后台管理", desc: "Ctrl+Shift+A", run: () => document.getElementById("v16AdminOpen").click() },
+      { label: "显示播放信息", desc: "D", run: () => this.toggleStats() },
+      { label: "A-B 循环面板", desc: "A", run: () => this.$.abBar.classList.toggle("show") }
+    ];
+    const videos = this.playlist.map(x => ({
+      label: x.name || x.title || "未命名",
+      desc: "播放",
+      run: () => this.intercept(x.url)
+    }));
+    this._v15Items = [...cmds, ...videos].filter(x => !q || x.label.toLowerCase().includes(q) || (x.desc || "").toLowerCase().includes(q));
+    this._v15Index = 0;
+    results.innerHTML = this._v15Items.map((x, i) => `
+      <div class="v15-result ${i === 0 ? "active" : ""}" data-i="${i}">
+        <span>${x.label}</span><small>${x.desc || ""}</small>
+      </div>`).join("") || '<div class="v14-muted" style="padding:12px">无匹配结果</div>';
+    results.querySelectorAll(".v15-result").forEach(el => {
+      el.onclick = () => {
+        this._v15Items[+el.dataset.i]?.run();
+        document.getElementById("v15Command").classList.remove("show");
+      };
+    });
+  }
+
+  v15Highlight() {
+    document.querySelectorAll(".v15-result").forEach((el, i) => {
+      el.classList.toggle("active", i === this._v15Index);
+    });
+  }
+
+  // ---------- V16 Admin ----------
+  v16EnsureState() {
+    // Ensure keys exist
+  }
+
+  v16AdminInit() {
+    document.getElementById("v16AdminOpen")?.addEventListener("click", () => {
+      document.getElementById("v16AdminLogin").classList.add("show");
+      document.getElementById("v16AdminPass").value = "";
+      document.getElementById("v16AdminError").classList.remove("show");
+    });
+    document.getElementById("v16AdminLoginBtn")?.addEventListener("click", () => this.v16Login());
+    document.getElementById("v16AdminPass")?.addEventListener("keydown", e => {
+      if (e.key === "Enter") this.v16Login();
+    });
+    document.getElementById("v16AdminClose")?.addEventListener("click", () => this.v16CloseAdmin());
+    document.getElementById("v16AdminLogout")?.addEventListener("click", () => this.v16CloseAdmin());
+
+    document.querySelectorAll("[data-admin-page]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-admin-page]").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".v16-admin-page").forEach(p => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("admin-" + btn.dataset.adminPage)?.classList.add("active");
+        document.getElementById("v16AdminTitle").textContent = btn.querySelector("span")?.textContent || "管理";
+        if (btn.dataset.adminPage === "dashboard") this.v16RefreshDashboard();
+        if (btn.dataset.adminPage === "playlist") this.v16RenderPlaylist();
+      });
+    });
+
+    document.getElementById("admAdd")?.addEventListener("click", () => {
+      document.getElementById("admEditor").style.display = "block";
+      document.getElementById("admName").value = "";
+      document.getElementById("admUrl").value = "";
+      document.getElementById("admCover").value = "";
+      document.getElementById("admOrder").value = "0";
+      this._editIndex = -1;
+    });
+    document.getElementById("admCancel")?.addEventListener("click", () => {
+      document.getElementById("admEditor").style.display = "none";
+    });
+    document.getElementById("admApply")?.addEventListener("click", () => this.v16ApplyItem());
+    document.getElementById("admSave")?.addEventListener("click", async () => {
+      localStorage.setItem("v11-playlist-cache", JSON.stringify(this.playlist));
+      this.toast("本地列表已保存");
+      this.log("保存本地播放列表");
+      // 同时同步到 Cloudflare KV
+      await this.syncPlaylistToKV();
+    });
+    document.getElementById("admSearch")?.addEventListener("input", e => this.v16RenderPlaylist(e.target.value));
+    document.getElementById("admChangePass")?.addEventListener("click", () => this.v16ChangePass());
+    document.getElementById("admExport")?.addEventListener("click", () => this.v16Export());
+    document.getElementById("admImportBtn")?.addEventListener("click", () => document.getElementById("admImport").click());
+    document.getElementById("admImport")?.addEventListener("change", e => this.v16Import(e));
+    document.getElementById("admClearLocal")?.addEventListener("click", () => {
+      if (confirm("确定清除本地管理数据？")) {
+        ["v11-favorites", "v11-history", "v11-playlist-cache"].forEach(k => localStorage.removeItem(k));
+        this.favorites = [];
+        this.history = [];
+        this.toast("本地数据已清除");
+        this.v16RefreshDashboard();
+      }
+    });
+  }
+
+  async v16Login() {
+    const pass = document.getElementById("v16AdminPass").value;
+    const errEl = document.getElementById("v16AdminError");
+    errEl.classList.remove("show");
+
+    // 优先走 Cloudflare KV 后端登录
+    if (this.apiBase && !this.apiBase.includes("YOUR_SUBDOMAIN")) {
+      try {
+        const r = await fetch(this.apiBase.replace(/\/+$/, "") + "/api/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: pass })
+        });
+        const j = await r.json();
+        if (j.ok && j.token) {
+          this.adminToken = j.token;
+          localStorage.setItem("v17-admin-token", j.token);
+          // 同步一份本地密码（兼容离线）
+          this.adminPassword = pass;
+          localStorage.setItem("v16-admin-pass", pass);
+          document.getElementById("v16AdminLogin").classList.remove("show");
+          document.getElementById("v16Admin").classList.add("show");
+          this.v16RefreshDashboard();
+          this.v16RenderPlaylist();
+          this.log("管理员登录成功 (Cloudflare KV)");
+          return;
+        }
+        // token 无效时继续尝试本地密码
+      } catch (e) {
+        this.log("KV 登录请求失败，尝试本地密码: " + e.message);
+      }
+    }
+
+    // 本地回退（无后端或后端不可用时）
+    if (pass === this.adminPassword) {
+      document.getElementById("v16AdminLogin").classList.remove("show");
+      document.getElementById("v16Admin").classList.add("show");
+      this.v16RefreshDashboard();
+      this.v16RenderPlaylist();
+      this.log("管理员登录成功 (本地)");
+    } else {
+      errEl.classList.add("show");
+    }
+  }
+
+  v16CloseAdmin() {
+    document.getElementById("v16Admin").classList.remove("show");
+    document.getElementById("v16AdminLogin").classList.remove("show");
+  }
+
+  v16RefreshDashboard() {
+    document.getElementById("admCount").textContent = this.playlist.length;
+    document.getElementById("admFav").textContent = this.favorites.length;
+    document.getElementById("admHistory").textContent = this.history.length;
+    try {
+      let size = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        size += (localStorage.getItem(k) || "").length;
+      }
+      document.getElementById("admStorage").textContent = (size / 1024).toFixed(1) + " KB";
+    } catch (e) {
+      document.getElementById("admStorage").textContent = "—";
+    }
+    const apiOk = this.apiBase && !this.apiBase.includes("YOUR_SUBDOMAIN");
+    const tokenOk = !!this.adminToken;
+    document.getElementById("admStatus").textContent =
+      `HLS.js: ${typeof Hls !== "undefined" ? "已加载" : "未加载"} · 网络: ${navigator.onLine ? "在线" : "离线"} · 当前: ${this.currentUrl ? "播放中" : "待机"} · KV: ${apiOk ? (tokenOk ? "已登录" : "已配置") : "未配置"}`;
+  }
+
+  v16RenderPlaylist(q = "") {
+    const tbody = document.getElementById("admRows");
+    if (!tbody) return;
+    const list = this.playlist.filter(x => {
+      if (!q) return true;
+      const s = q.toLowerCase();
+      return (x.name || "").toLowerCase().includes(s) || (x.url || "").toLowerCase().includes(s);
+    });
+    tbody.innerHTML = list.map((x, i) => {
+      const realIdx = this.playlist.indexOf(x);
+      const type = (x.url || "").toLowerCase().includes(".m3u8") ? "HLS" : "MP4";
+      return `<tr>
+        <td>${x.name || x.title || "未命名"}</td>
+        <td>${type}</td>
+        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${(x.url || "").slice(0, 40)}</td>
+        <td>
+          <button class="v16-admin-btn" data-edit="${realIdx}">编辑</button>
+          <button class="v16-admin-btn" data-del="${realIdx}">删除</button>
+        </td>
+      </tr>`;
+    }).join("");
+    tbody.querySelectorAll("[data-edit]").forEach(btn => {
+      btn.onclick = () => {
+        const i = +btn.dataset.edit;
+        const x = this.playlist[i];
+        this._editIndex = i;
+        document.getElementById("admEditor").style.display = "block";
+        document.getElementById("admName").value = x.name || x.title || "";
+        document.getElementById("admUrl").value = x.url || "";
+        document.getElementById("admCover").value = x.cover || "";
+        document.getElementById("admType").value = (x.url || "").includes(".m3u8") ? "hls" : "mp4";
+      };
+    });
+    tbody.querySelectorAll("[data-del]").forEach(btn => {
+      btn.onclick = async () => {
+        const i = +btn.dataset.del;
+        if (confirm("删除此条目？")) {
+          this.playlist.splice(i, 1);
+          this.renderList();
+          this.v16RenderPlaylist(q);
+          this.log("删除播放列表项 #" + i);
+          localStorage.setItem("v11-playlist-cache", JSON.stringify(this.playlist));
+          await this.syncPlaylistToKV();
+        }
+      };
+    });
+  }
+
+  async v16ApplyItem() {
+    const name = document.getElementById("admName").value.trim();
+    const url = document.getElementById("admUrl").value.trim();
+    if (!name || !url) {
+      this.toast("请填写名称和地址");
+      return;
+    }
+    const item = {
+      name,
+      url,
+      cover: document.getElementById("admCover").value.trim() || undefined,
+      order: +document.getElementById("admOrder").value || 0
+    };
+    if (this._editIndex >= 0) {
+      this.playlist[this._editIndex] = { ...this.playlist[this._editIndex], ...item };
+    } else {
+      this.playlist.push(item);
+    }
+    this.renderList();
+    this.v16RenderPlaylist();
+    document.getElementById("admEditor").style.display = "none";
+    localStorage.setItem("v11-playlist-cache", JSON.stringify(this.playlist));
+    this.toast("已应用");
+    this.log((this._editIndex >= 0 ? "编辑" : "新增") + "视频: " + name);
+    await this.syncPlaylistToKV();
+  }
+
+  async v16ChangePass() {
+    const oldP = document.getElementById("admOldPass").value;
+    const newP = document.getElementById("admNewPass").value;
+    if (!newP || newP.length < 4) {
+      this.toast("新密码至少 4 位");
+      return;
+    }
+
+    // 优先走 KV 后端修改
+    if (this.apiBase && !this.apiBase.includes("YOUR_SUBDOMAIN") && this.adminToken) {
+      try {
+        const r = await fetch(this.apiBase.replace(/\/+$/, "") + "/api/admin/password", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + this.adminToken
+          },
+          body: JSON.stringify({
+            oldAdminPassword: oldP,
+            newAdminPassword: newP
+          })
+        });
+        const j = await r.json();
+        if (j.ok) {
+          this.adminPassword = newP;
+          localStorage.setItem("v16-admin-pass", newP);
+          document.getElementById("admOldPass").value = "";
+          document.getElementById("admNewPass").value = "";
+          this.toast("管理员密码已修改 (KV)");
+          this.log("管理员密码已通过 KV 修改");
+          return;
+        }
+        this.toast(j.error || "修改失败");
+        return;
+      } catch (e) {
+        this.log("KV 改密失败，尝试本地: " + e.message);
+      }
+    }
+
+    // 本地回退
+    if (oldP !== this.adminPassword) {
+      this.toast("当前密码错误");
+      return;
+    }
+    this.adminPassword = newP;
+    localStorage.setItem("v16-admin-pass", newP);
+    document.getElementById("admOldPass").value = "";
+    document.getElementById("admNewPass").value = "";
+    this.toast("管理员密码已修改 (本地)");
+    this.log("管理员密码已修改 (本地)");
+  }
+
+  v16Export() {
+    const data = {
+      playlist: this.playlist,
+      favorites: this.favorites,
+      history: this.history,
+      version: "v17-kv",
+      exportedAt: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "master-player-v17-export.json";
+    a.click();
+    this.toast("已导出");
+  }
+
+  async v16Import(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (Array.isArray(data.playlist)) this.playlist = data.playlist;
+        if (Array.isArray(data.favorites)) this.favorites = data.favorites;
+        if (Array.isArray(data.history)) this.history = data.history;
+        localStorage.setItem("v11-playlist-cache", JSON.stringify(this.playlist));
+        localStorage.setItem("v11-favorites", JSON.stringify(this.favorites));
+        localStorage.setItem("v11-history", JSON.stringify(this.history));
+        this.renderList();
+        this.v16RefreshDashboard();
+        this.v16RenderPlaylist();
+        this.toast("导入成功");
+        this.log("导入管理数据");
+        // 自动同步到 KV
+        await this.syncPlaylistToKV();
+      } catch (err) {
+        this.toast("导入失败：JSON 无效");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
+  // ---------- V17 A-B Loop & Seek Preview ----------
+  v17Init() {
+    document.getElementById("abSetA")?.addEventListener("click", () => {
+      this.ab.a = this.$.video.currentTime;
+      this.toast("A 点: " + this.fmt(this.ab.a));
+      document.getElementById("abSetA").classList.add("active");
+    });
+    document.getElementById("abSetB")?.addEventListener("click", () => {
+      this.ab.b = this.$.video.currentTime;
+      this.toast("B 点: " + this.fmt(this.ab.b));
+      document.getElementById("abSetB").classList.add("active");
+    });
+    document.getElementById("abToggle")?.addEventListener("click", () => {
+      if (this.ab.a == null || this.ab.b == null) {
+        this.toast("请先设置 A / B 点");
+        return;
+      }
+      if (this.ab.a >= this.ab.b) {
+        this.toast("A 点必须小于 B 点");
+        return;
+      }
+      this.ab.active = !this.ab.active;
+      document.getElementById("abToggle").classList.toggle("active", this.ab.active);
+      this.toast(this.ab.active ? "A-B 循环已开启" : "A-B 循环已关闭");
+    });
+    document.getElementById("abClear")?.addEventListener("click", () => {
+      this.ab = { a: null, b: null, active: false };
+      document.getElementById("abSetA").classList.remove("active");
+      document.getElementById("abSetB").classList.remove("active");
+      document.getElementById("abToggle").classList.remove("active");
+      this.toast("A-B 已清除");
+    });
+  }
+
+  v17ABCheck() {
+    if (!this.ab.active || this.ab.a == null || this.ab.b == null) return;
+    if (this.$.video.currentTime >= this.ab.b) {
+      this.$.video.currentTime = this.ab.a;
+    }
+  }
+
+  v17SeekPreview(e) {
+    const prev = this.$.seekPreview;
+    if (!prev || !isFinite(this.$.video.duration)) return;
+    const r = this.$.progressHit.getBoundingClientRect();
+    const p = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    prev.textContent = this.fmt(p * this.$.video.duration);
+    prev.classList.add("show");
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  window.MasterPlayer = new MasterPlayerV17();
+});
+</script>
+</body>
+</html>
