@@ -1,116 +1,64 @@
-{
-  "playlist": [
-    {
-      "name": "旺苍新闻综合",
-      "url": "https://channel.wcrmt.cn/nmip-media/channellive/channel105268/playlist.m3u8"
-    },
-    {
-      "name": "绍兴公共",
-      "url": "https://live.shaoxing.com.cn/video/s10001-sxtv2/index.m3u8"
-    },
-    {
-      "name": "绍兴影视",
-      "url": "https://live.shaoxing.com.cn/video/s10001-sxtv3/index.m3u8"
-    },
-    {
-      "name": "青川综合",
-      "url": "https://qcfile.qcrmt.com/nmip-media/channellive/channel100933/playlist.m3u8"
-    },
-    {
-      "name": "vip影院01",
-      "url": "https://ru.xiaohe1999.dpdns.org/raw/game/VID_20260628_041632_966.mp4"
-    },
-    {
-      "name": "vip影院02",
-      "url": "https://ru.xiaohe1999.dpdns.org/raw/game/VID_20260628_041057_916.mp4"
-    },
-    {
-      "name": "vip影院03",
-      "url": "https://ru.xiaohe1999.dpdns.org/raw/game/VID_20260628_051918_607.mp4"
-    },
-    {
-      "name": "春晚1983",
-      "url": "https://alimov2.a.kwimgs.com/upic/2022/01/31/15/BMjAyMjAxMzExNTU5MTRfNDAzMDAxOTlfNjYyNzMxNjcwMjBfMF8z_b_Beb3bda599f76c60c463c433ca7460153.mp4"
-    },
-    {
-      "name": "春晚1987",
-      "url": "https://alimov2.a.kwimgs.com/upic/2022/01/31/16/BMjAyMjAxMzExNjAwMDhfNDAzMDAxOTlfNjYyNzMyNjMyMDNfMF8z_b_B570493ed8f7200d4013a66b2d21b2de9.mp4"
-    },
-    {
-      "name": "春晚1999",
-      "url": "https://alimov2.a.kwimgs.com/upic/2023/01/13/20/BMjAyMzAxMTMyMDA5MjJfNDAzMDAxOTlfOTM0OTkwNDQxNTRfMF8z_b_B0b5e52bc003285ef66ec0cbb2be08556.mp4"
-    },
-    {
-      "name": "春晚2002",
-      "url": "https://alimov2.a.kwimgs.com/upic/2023/01/13/21/BMjAyMzAxMTMyMTE4MzRfNDAzMDAxOTlfOTM1MDY4ODIxNDdfMF8z_b_Ba6271d10b7e6cfae83759033a091f257.mp4"
-    },
-    {
-      "name": "广元综合",
-      "url": "https://m3u8.channel.dzsm.com/nmip-media/channellive/channel100999/playlist.m3u8"
-    },
-    {
-      "name": "广元文化生活",
-      "url": "https://m3u8.channel.dzsm.com/nmip-media/channellive/channel101257/playlist.m3u8"
-    },
-    {
-      "name": "还珠格格第二部 十一集",
-      "url": "https://vip.ffzy-online3.com/20230112/606_ad5d8825/index.m3u8",
-      "order": 0
-    },
-    {
-      "name": "还珠格格第二部 十二集",
-      "url": "https://vip.ffzy-online3.com/20230112/605_34192b2f/index.m3u8",
-      "order": 0
-    }
-  ],
-  "favorites": [],
-  "history": [
-    {
-      "url": "https://vip.ffzy-online3.com/20230112/606_ad5d8825/index.m3u8",
-      "name": "还珠格格第二部 十一集",
-      "time": 1786511343815
-    },
-    {
-      "url": "https://vip.ffzy-online3.com/20230112/605_34192b2f/index.m3u8",
-      "name": "还珠格格第二部 十二集",
-      "time": 1786511336928
-    },
-    {
-      "url": "https://live.shaoxing.com.cn/video/s10001-sxtv3/index.m3u8",
-      "name": "绍兴影视",
-      "time": 1786511209082
-    },
-    {
-      "url": "https://channel.wcrmt.cn/nmip-media/channellive/channel105268/playlist.m3u8",
-      "name": "旺苍新闻综合",
-      "time": 1786511071779
-    },
-    {
-      "url": "https://live.shaoxing.com.cn/video/s10001-sxtv2/index.m3u8",
-      "name": "绍兴公共",
-      "time": 1786510961254
-    },
-    {
-      "url": "https://alimov2.a.kwimgs.com/upic/2022/01/31/15/BMjAyMjAxMzExNTU5MTRfNDAzMDAxOTlfNjYyNzMxNjcwMjBfMF8z_b_Beb3bda599f76c60c463c433ca7460153.mp4",
-      "name": "春晚1983",
-      "time": 1786509238692
-    },
-    {
-      "url": "https://qcfile.qcrmt.com/nmip-media/channellive/channel100933/playlist.m3u8",
-      "name": "青川综合",
-      "time": 1786508743870
-    },
-    {
-      "url": "https://ru.xiaohe1999.dpdns.org/raw/game/VID_20260628_051918_607.mp4",
-      "name": "vip影院03",
-      "time": 1786508736384
-    },
-    {
-      "url": "https://m3u8.channel.dzsm.com/nmip-media/channellive/channel101257/playlist.m3u8",
-      "name": "广元文化生活",
-      "time": 1786429749116
-    }
-  ],
-  "version": "v17",
-  "exportedAt": "2026-08-12T05:09:23.092Z"
-}
+[
+  {
+    "name": "旺苍新闻综合",
+    "url": "https://channel.wcrmt.cn/nmip-media/channellive/channel105268/playlist.m3u8"
+  },
+  {
+    "name": "绍兴公共",
+    "url": "https://live.shaoxing.com.cn/video/s10001-sxtv2/index.m3u8"
+  },
+  {
+    "name": "绍兴影视",
+    "url": "https://live.shaoxing.com.cn/video/s10001-sxtv3/index.m3u8"
+  },
+  {
+    "name": "青川综合",
+    "url": "https://qcfile.qcrmt.com/nmip-media/channellive/channel100933/playlist.m3u8"
+  },
+  {
+    "name": "vip影院01",
+    "url": "https://ru.xiaohe1999.dpdns.org/raw/game/VID_20260628_041632_966.mp4"
+  },
+  {
+    "name": "vip影院02",
+    "url": "https://ru.xiaohe1999.dpdns.org/raw/game/VID_20260628_041057_916.mp4"
+  },
+  {
+    "name": "vip影院03",
+    "url": "https://ru.xiaohe1999.dpdns.org/raw/game/VID_20260628_051918_607.mp4"
+  },
+  {
+    "name": "春晚1983",
+    "url": "https://alimov2.a.kwimgs.com/upic/2022/01/31/15/BMjAyMjAxMzExNTU5MTRfNDAzMDAxOTlfNjYyNzMxNjcwMjBfMF8z_b_Beb3bda599f76c60c463c433ca7460153.mp4"
+  },
+  {
+    "name": "春晚1987",
+    "url": "https://alimov2.a.kwimgs.com/upic/2022/01/31/16/BMjAyMjAxMzExNjAwMDhfNDAzMDAxOTlfNjYyNzMyNjMyMDNfMF8z_b_B570493ed8f7200d4013a66b2d21b2de9.mp4"
+  },
+  {
+    "name": "春晚1999",
+    "url": "https://alimov2.a.kwimgs.com/upic/2023/01/13/20/BMjAyMzAxMTMyMDA5MjJfNDAzMDAxOTlfOTM0OTkwNDQxNTRfMF8z_b_B0b5e52bc003285ef66ec0cbb2be08556.mp4"
+  },
+  {
+    "name": "春晚2002",
+    "url": "https://alimov2.a.kwimgs.com/upic/2023/01/13/21/BMjAyMzAxMTMyMTE4MzRfNDAzMDAxOTlfOTM1MDY4ODIxNDdfMF8z_b_Ba6271d10b7e6cfae83759033a091f257.mp4"
+  },
+  {
+    "name": "广元综合",
+    "url": "https://m3u8.channel.dzsm.com/nmip-media/channellive/channel100999/playlist.m3u8"
+  },
+  {
+    "name": "广元文化生活",
+    "url": "https://m3u8.channel.dzsm.com/nmip-media/channellive/channel101257/playlist.m3u8"
+  },
+  {
+    "name": "还珠格格第二部 十一集",
+    "url": "https://vip.ffzy-online3.com/20230112/606_ad5d8825/index.m3u8",
+    "order": 0
+  },
+  {
+    "name": "还珠格格第二部 十二集",
+    "url": "https://vip.ffzy-online3.com/20230112/605_34192b2f/index.m3u8",
+    "order": 0
+  }
+]
